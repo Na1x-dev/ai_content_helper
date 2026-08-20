@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: ai_helper_db
+    restart: always
+    environment:
+      POSTGRES_USER: ai_user
+      POSTGRES_PASSWORD: ai_password
+      POSTGRES_DB: ai_content_db
+    ports:
+      - "5431:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+  
+  
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6373:6379" 
+
+
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - AI_MOCK_MODE=True  # Пока тестируем локально, включим заглушку
+    depends_on:
+      - db
+      - redis
+
+
+  celery_worker:
+    build: .
+    command: celery -A core worker --loglevel=info # замени core на имя папки проекта
+    volumes:
+      - .:/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - AI_MOCK_MODE=True
+    depends_on:
+      - redis
+      - db
+
+
+volumes:
+  postgres_data:
+
+
