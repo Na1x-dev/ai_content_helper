@@ -1,4 +1,5 @@
 project_context.pdf
+client_secret.json
 # Секреты и конфигурация (Самое важное!)
 .env
 .env.dev
