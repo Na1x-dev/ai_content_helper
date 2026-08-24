@@ -59,6 +59,7 @@ JWT_AUTH_COOKIE = None          # Строго None, чтобы отключит
 JWT_AUTH_REFRESH_COOKIE = None
 
 # Заставляем dj-rest-auth дублировать токены в JSON-ответ при логине
+# чень важная строчка, без нее токен не передается
 REST_AUTH = {
     'JWT_SERIALIZER': 'dj_rest_auth.serializers.JWTSerializer',
     'USE_JWT': True,

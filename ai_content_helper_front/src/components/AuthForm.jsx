@@ -11,9 +11,17 @@ export default function AuthForm({ onAuthSuccess }) {
     setError('');
     
     const endpoint = isLogin ? 'auth/login/' : 'auth/registration/';
-    const payload = isLogin 
-      ? { username: formData.username, password: formData.password }
-      : formData;
+    const payload = isLogin
+    ? { 
+        username: formData.username, 
+        password: formData.password 
+      }
+    : { 
+        username: formData.username,
+        email: formData.email,
+        password1: formData.password,  // Переименовываем password -> password1 для бэкенда
+        password2: formData.password2  // Повтор пароля
+      };
 
     try {
       const response = await API.post(endpoint, payload);
