@@ -37,8 +37,9 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'allauth.socialaccount.providers.google', 
     'posts',
+    'corsheaders',
 ]
-
+ 
 SITE_ID = 1
 
 
@@ -47,15 +48,23 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated', # Закрываем все эндпоинты по умолчанию
-    ],
+        'rest_framework.permissions.IsAuthenticated',
+    ]
 }
 
 
-# Включаем поддержку JWT в dj-rest-auth вместо обычных токенов
+
 REST_USE_JWT = True
-JWT_AUTH_COOKIE = 'ai-saas-auth'
-JWT_AUTH_REFRESH_COOKIE = 'ai-saas-refresh'
+JWT_AUTH_COOKIE = None          # Строго None, чтобы отключить куки авторизации
+JWT_AUTH_REFRESH_COOKIE = None
+
+# Заставляем dj-rest-auth дублировать токены в JSON-ответ при логине
+REST_AUTH = {
+    'JWT_SERIALIZER': 'dj_rest_auth.serializers.JWTSerializer',
+    'USE_JWT': True,
+}
+
+
 
 # Настройки django-allauth (упрощаем регистрацию для тестов)
 ACCOUNT_SIGNUP_FIELDS = ['email', 'username*', 'password1*', 'password2*']
@@ -63,6 +72,7 @@ ACCOUNT_EMAIL_VERIFICATION = 'none' # Чтобы не требовать под�
 ACCOUNT_LOGIN_METHODS = {'username'}
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -149,3 +159,9 @@ MAILERS = {
 # Настройки Celery
 CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://localhost:6379/0')
 CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
