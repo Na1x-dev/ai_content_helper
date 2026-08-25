@@ -1,100 +1,206 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import API from '../api';
 
 export default function AuthForm({ onAuthSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ username: '', email: '', password: '', password2: '' });
   const [error, setError] = useState('');
+  const [googleStatus, setGoogleStatus] = useState('Инициализация Google Auth...');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    
-    const endpoint = isLogin ? 'auth/login/' : 'auth/registration/';
-    const payload = isLogin
-    ? { 
-        username: formData.username, 
-        password: formData.password 
+  // Извлекаем клиентский ID напрямую из окружения Vite
+  const clientId = import.meta.env.GOOGLE_CLIENT_ID;
+
+  useEffect(() => {
+  let checkInterval; // Правильное имя переменной (camelCase)
+
+  const initGoogleAuth = () => {
+    /* global google */
+    if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+      if (checkInterval) clearInterval(checkInterval); // Исправлен регистр букв!
+
+      if (!clientId) {
+        setGoogleStatus("Ошибка: Проверьте GOOGLE_CLIENT_ID в файле .env");
+        return;
       }
-    : { 
-        username: formData.username,
-        email: formData.email,
-        password1: formData.password,  // Переименовываем password -> password1 для бэкенда
-        password2: formData.password2  // Повтор пароля
-      };
 
-    try {
-      const response = await API.post(endpoint, payload);
+      try {
+        google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleGoogleLoginSuccess,
+        });
+
+        const btnContainer = document.getElementById("googleBtn");
+        if (btnContainer) {
+          google.accounts.id.renderButton(btnContainer, {
+            theme: "outline",
+            size: "large",
+            width: btnContainer.offsetWidth || 340,
+            text: "signin_with",
+            shape: "rectangular"
+          });
+        }
+        setGoogleStatus(""); // Успешно отрендерено, убираем лог загрузки
+      } catch (err) {
+        console.error("Ошибка при рендере кнопки Google:", err);
+        setGoogleStatus("Не удалось отобразить кнопку Google");
+      }
+    }
+  };
+
+  // Проверяем доступность объекта google каждые 300мс
+  checkInterval = setInterval(initGoogleAuth, 300);
   
-      // Проверяем, что бэкенд прислал ключ access
+  return () => {
+    if (checkInterval) clearInterval(checkInterval);
+  };
+}, [isLogin, clientId]);
+
+
+  const handleGoogleLoginSuccess = async (googleResponse) => {
+    setError('');
+    try {
+      const response = await API.post('auth/google/', {
+        access_token: googleResponse.credential
+      });
+
       if (response.data && response.data.access) {
         localStorage.setItem('access_token', response.data.access);
         onAuthSuccess();
       } else {
-        console.error("Бэкенд не прислал access-токен. Ответ сервера:", response.data);
-        setError("Ошибка сервера: не получен токен авторизации.");
+        setError("Ошибка Google авторизации: сервер не вернул JWT-токен.");
       }
     } catch (err) {
-  setError(err.response?.data?.error || 'Произошла ошибка. Проверьте данные.');
-}
+      setError(err.response?.data?.error || 'Не удалось авторизоваться через Google-аккаунт.');
+    }
+  };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    const endpoint = isLogin ? 'auth/login/' : 'auth/registration/';
+    const payload = isLogin
+      ? { username: formData.username, password: formData.password }
+      : {
+          username: formData.username,
+          email: formData.email,
+          password1: formData.password,
+          password2: formData.password2
+        };
+
+    try {
+      const response = await API.post(endpoint, payload);
+      if (response.data && response.data.access) {
+        localStorage.setItem('access_token', response.data.access);
+        onAuthSuccess();
+      } else {
+        setError("Ошибка авторизации: не получен токен доступа.");
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Проверьте корректность введенных данных.');
+    }
   };
 
   return (
-    <div className="max-w-md w-full bg-slate-800 p-8 rounded-2xl border border-slate-700 shadow-xl">
-      <h2 className="text-2xl font-bold mb-6 text-center text-white">
-        {isLogin ? 'Войти в SaaS' : 'Регистрация'}
-      </h2>
-      
-      {error && <div className="mb-4 p-3 bg-red-500/20 border border-red-500 text-red-400 rounded-lg text-sm">{error}</div>}
+    <div className="w-full max-w-md mx-4 animate-fade-in z-10">
+      <div className="card-bg backdrop-blur-xl border shadow-xl rounded-3xl p-8 md:p-10 transition-colors duration-200">
+        
+        <div className="mb-6 text-center">
+          <h2 className="text-xl font-bold tracking-tight mb-1.5 dark:text-white text-slate-900">
+            {isLogin ? 'Войти в личный кабинет' : 'Регистрация в SaaS'}
+          </h2>
+          <p className="text-xs dark:text-slate-400 text-slate-500">
+            Добро пожаловать в ИИ-студию генерации контента
+          </p>
+        </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="text"
-          placeholder="Имя пользователя"
-          className="w-full p-3 rounded-lg bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-cyan-500"
-          value={formData.username}
-          onChange={(e) => setFormData({...formData, username: e.target.value})}
-          required
-        />
-        {!isLogin && (
-          <input
-            type="email"
-            placeholder="Email"
-            className="w-full p-3 rounded-lg bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-cyan-500"
-            value={formData.email}
-            onChange={(e) => setFormData({...formData, email: e.target.value})}
-            required
-          />
+        {error && (
+          <div className="mb-5 p-3.5 bg-red-500/10 border border-red-500/20 text-red-500 dark:text-red-400 rounded-2xl text-xs font-medium">
+            {error}
+          </div>
         )}
-        <input
-          type="password"
-          placeholder="Пароль"
-          className="w-full p-3 rounded-lg bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-cyan-500"
-          value={formData.password}
-          onChange={(e) => setFormData({...formData, password: e.target.value})}
-          required
-        />
-        {!isLogin && (
-          <input
-            type="password"
-            placeholder="Повторите пароль"
-            className="w-full p-3 rounded-lg bg-slate-900 border border-slate-700 text-white focus:outline-none focus:border-cyan-500"
-            value={formData.password2}
-            onChange={(e) => setFormData({...formData, password2: e.target.value})}
-            required
-          />
-        )}
-        <button type="submit" className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-bold py-3 rounded-lg transition duration-200">
-          {isLogin ? 'Войти' : 'Создать аккаунт'}
-        </button>
-      </form>
 
-      <div className="mt-6 text-center text-sm text-slate-400">
-        {isLogin ? 'Нет аккаунта?' : 'Уже есть аккаунт?'} {' '}
-        <button onClick={() => setIsLogin(!isLogin)} className="text-cyan-400 hover:underline font-medium">
-          {isLogin ? 'Зарегистрироваться' : 'Войти'}
-        </button>
+        {/* СЕКЦИЯ КНОПКИ GOOGLE */}
+        <div className="mb-5 w-full flex flex-col items-center justify-center min-h-[44px]">
+          {googleStatus && (
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 animate-pulse font-mono">
+              {googleStatus}
+            </p>
+          )}
+          <div id="googleBtn" className="w-full"></div>
+        </div>
+
+        <div className="relative flex py-2 items-center my-4">
+          <div className="flex-grow border-t dark:border-slate-800 border-slate-200"></div>
+          <span className="flex-shrink mx-4 dark:text-slate-500 text-slate-400 text-[11px] uppercase font-bold tracking-wider">или</span>
+          <div className="flex-grow border-t dark:border-slate-800 border-slate-200"></div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <input
+              type="text"
+              placeholder="Имя пользователя"
+              className="w-full px-4 py-3 rounded-xl input-bg border text-sm focus:outline-none focus:border-cyan-500/80 focus:ring-4 focus:ring-cyan-500/10 transition-all"
+              value={formData.username}
+              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              required
+            />
+          </div>
+
+          {!isLogin && (
+            <div>
+              <input
+                type="email"
+                placeholder="Электронная почта"
+                className="w-full px-4 py-3 rounded-xl input-bg border text-sm focus:outline-none focus:border-cyan-500/80 focus:ring-4 focus:ring-cyan-500/10 transition-all"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
+              />
+            </div>
+          )}
+
+          <div>
+            <input
+              type="password"
+              placeholder="Пароль"
+              className="w-full px-4 py-3 rounded-xl input-bg border text-sm focus:outline-none focus:border-cyan-500/80 focus:ring-4 focus:ring-cyan-500/10 transition-all"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required
+            />
+          </div>
+
+          {!isLogin && (
+            <div>
+              <input
+                type="password"
+                placeholder="Повторите пароль"
+                className="w-full px-4 py-3 rounded-xl input-bg border text-sm focus:outline-none focus:border-cyan-500/80 focus:ring-4 focus:ring-cyan-500/10 transition-all"
+                value={formData.password2}
+                onChange={(e) => setFormData({ ...formData, password2: e.target.value })}
+                required
+              />
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="w-full bg-slate-900 dark:bg-cyan-600 hover:bg-slate-800 dark:hover:bg-cyan-500 text-white font-medium py-3 rounded-xl transition duration-200 text-sm shadow-sm cursor-pointer"
+          >
+            {isLogin ? 'Авторизоваться' : 'Создать аккаунт'}
+          </button>
+        </form>
+
+        <div className="mt-6 text-center text-xs dark:text-slate-500 text-slate-400">
+          {isLogin ? 'Нет аккаунта? ' : 'Уже зарегистрированы? '}
+          <button
+            onClick={() => setIsLogin(!isLogin)}
+            className="text-cyan-600 dark:text-cyan-400 hover:underline font-semibold ml-1 transition"
+          >
+            {isLogin ? 'Зарегистрироваться' : 'Войти'}
+          </button>
+        </div>
       </div>
     </div>
   );
