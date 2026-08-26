@@ -66,11 +66,19 @@ REST_AUTH = {
 }
 
 
-
-# Настройки django-allauth (упрощаем регистрацию для тестов)
+# Настройки django-allauth (Актуально для версии 65.x)
 ACCOUNT_SIGNUP_FIELDS = ['email', 'username*', 'password1*', 'password2*']
-ACCOUNT_EMAIL_VERIFICATION = 'none' # Чтобы не требовать подтверждения почты на этапе MVP
 ACCOUNT_LOGIN_METHODS = {'username'}
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+
+# Разрешаем автоматический вход без промежуточных страниц
+SOCIALACCOUNT_AUTO_SIGNUP = True
+
+# КРИТИЧЕСКИ ВАЖНО: Включаем автоматическое связывание Google-входа 
+# с уже существующим в базе пользователем по его Email
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -166,3 +174,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
+
+# Автоматически связывать аккаунт Google с локальным пользователем, если их email совпадают
+SOCIALACCOUNT_ADAPTER = 'allauth.socialaccount.adapter.DefaultSocialAccountAdapter'

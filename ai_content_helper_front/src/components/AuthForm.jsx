@@ -10,27 +10,30 @@ export default function AuthForm({ onAuthSuccess }) {
   // Извлекаем клиентский ID напрямую из окружения Vite
   const clientId = import.meta.env.GOOGLE_CLIENT_ID;
 
+
+
   useEffect(() => {
-  let checkInterval; // Правильное имя переменной (camelCase)
-
+  let checkInterval; 
+   console.log(clientId)
   const initGoogleAuth = () => {
-    /* global google */
     if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-      if (checkInterval) clearInterval(checkInterval); // Исправлен регистр букв!
-
+      
+      if (checkInterval) clearInterval(checkInterval);
+      
       if (!clientId) {
         setGoogleStatus("Ошибка: Проверьте GOOGLE_CLIENT_ID в файле .env");
         return;
       }
-
+      
       try {
         google.accounts.id.initialize({
           client_id: clientId,
           callback: handleGoogleLoginSuccess,
         });
-
+       
         const btnContainer = document.getElementById("googleBtn");
         if (btnContainer) {
+   
           google.accounts.id.renderButton(btnContainer, {
             theme: "outline",
             size: "large",

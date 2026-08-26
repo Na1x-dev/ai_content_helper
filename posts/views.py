@@ -15,6 +15,8 @@ from rest_framework.response import Response
 import os
 
 
+
+
 class GeneratedPostViewSet(viewsets.ModelViewSet):
     serializer_class = GeneratedPostSerializer
     
@@ -67,15 +69,20 @@ class GeneratedPostViewSet(viewsets.ModelViewSet):
 class GoogleLogin(SocialLoginView):
     """
     Эндпоинт для входа через Google Account.
-    Фронтенд отправляет нам 'access_token' или 'code' от Google,
-    а этот класс проверяет его, регистрирует юзера и возвращает JWT.
+    Использует стандартный GoogleOAuth2Adapter, но дублирует токен в id_token.
     """
     adapter_class = GoogleOAuth2Adapter
     client_class = OAuth2Client
-    
-    # URL, который мы указали в Google Cloud Console на Шаге 1
-    callback_url = 'http://127.0.0.1:8000/accounts/google/login/callback/'
+    callback_url = 'http://127.0.0'
 
     @property
     def callback_url_computed(self):
         return self.callback_url
+
+    def post(self, request, *args, **kwargs):
+        # Из-за новой кнопки Google Identity Services фронтенд присылает нам JWT-токен.
+        # Чтобы allauth не шел в сеть и не падал, мы дублируем его в поле 'id_token'.
+        if 'access_token' in request.data and 'id_token' not in request.data:
+            request.data['id_token'] = request.data['access_token']
+            
+        return super().post(request, *args, **kwargs)
