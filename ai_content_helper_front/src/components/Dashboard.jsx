@@ -10,6 +10,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [limits, setLimits] = useState({ plan: 'Загрузка...', generations_left: 0 });
   const [copied, setCopied] = useState(false);
+  const [tone, setTone] = useState('neutral');
 
   const fetchLimits = async () => {
     try {
@@ -67,7 +68,7 @@ export default function Dashboard() {
     setGeneratedText('');
     setStatusText('Постановка задачи в асинхронную очередь Celery...');
     try {
-      const response = await API.post('posts/', { prompt, platform });
+      const response = await API.post('posts/', { prompt, platform, tone });
       const createdPost = response.data;
       startPolling(createdPost.id);
     } catch (err) {
@@ -78,7 +79,7 @@ export default function Dashboard() {
 
   return (
     <div className="w-full flex flex-col justify-between items-stretch gap-6 self-stretch min-h-[calc(100vh-8rem)]">
-      
+
       {/* ИНФОРМАЦИОННЫЙ СТАТУС-БАР */}
       <div className="card-bg backdrop-blur-md px-4 py-3 rounded-2xl border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm transition-colors">
         <div className="flex items-center gap-2.5">
@@ -98,7 +99,7 @@ export default function Dashboard() {
 
       {/* ОСНОВНАЯ РАБОЧАЯ СЕТКА */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-grow items-stretch">
-        
+
         {/* ЛЕВАЯ ПАНЕЛЬ: Форма параметров */}
         <div className="card-bg backdrop-blur-xl p-5 md:p-6 rounded-2xl border shadow-md flex flex-col justify-between transition-colors">
           <form onSubmit={handleGenerate} className="space-y-5 h-full flex flex-col justify-between">
@@ -106,7 +107,7 @@ export default function Dashboard() {
               <h3 className="text-sm font-semibold dark:text-slate-200 text-slate-800 flex items-center gap-2 tracking-tight">
                 <Sparkles size={15} className="text-cyan-500" /> Параметры генерации
               </h3>
-              
+
               <div>
                 <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">О чем написать пост?</label>
                 <textarea
@@ -133,9 +134,25 @@ export default function Dashboard() {
                   </select>
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400 dark:text-slate-500">
                     <svg className="fill-current h-4 w-4" xmlns="http://w3.org" viewBox="0 0 20 20">
-                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                     </svg>
                   </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 uppercase tracking-wide">Тональность текста</label>
+                <div className="relative">
+                  <select
+                    className="w-full p-3.5 rounded-xl input-bg border text-sm transition-all appearance-none cursor-pointer pr-10 shadow-sm focus:outline-none focus:border-cyan-500/80 focus:ring-4 focus:ring-cyan-500/10"
+                    value={tone}
+                    onChange={(e) => setTone(e.target.value)}
+                  >
+                    <option value="neutral">Нейтральный/Естественный</option>
+                    <option value="friendly">Дружелюбный и разговорный</option>
+                    <option value="business">Строгий и экспертный</option>
+                    <option value="funny">Юмористический/Саркастичный</option>
+                  </select>
                 </div>
               </div>
             </div>
