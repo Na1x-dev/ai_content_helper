@@ -11,13 +11,11 @@ services:
       - "5431:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-  
-  
+
   redis:
     image: redis:7-alpine
     ports:
-      - "6373:6379" 
-
+      - "6373:6379"
 
   web:
     build: .
@@ -29,11 +27,10 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - AI_MOCK_MODE=True  # Пока тестируем локально, включим заглушку
+      - AI_MOCK_MODE=True # Пока тестируем локально, включим заглушку
     depends_on:
       - db
       - redis
-
 
   celery_worker:
     build: .
@@ -48,8 +45,21 @@ services:
       - redis
       - db
 
+  frontend:
+    build: ./ai_content_helper_front
+    container_name: ai_helper_front
+    volumes:
+      - ./ai_content_helper_front:/app
+      - /app/node_modules # Чтобы локальные node_modules не затирали контейнерные
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/
+  # Сначала запустятся бэк, база и редис, и только потом фронт\
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+    depends_on:
+      - web
 
 volumes:
   postgres_data:
-
 
