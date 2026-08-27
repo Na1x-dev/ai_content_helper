@@ -94,6 +94,7 @@ export default function AuthForm({ onAuthSuccess }) {
       const response = await API.post(endpoint, payload);
       if (response.data && response.data.access) {
         localStorage.setItem('access_token', response.data.access);
+        localStorage.setItem('username', response.data.user.username); 
         onAuthSuccess();
       } else {
         setError("Ошибка авторизации: не получен токен доступа.");

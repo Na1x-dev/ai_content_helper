@@ -6,7 +6,9 @@ from django.dispatch import receiver
 class UserProfile(models.Model):
     PLAN_CHOICES = [
         ('free', 'Бесплатный'),
-        ('premium', 'Премиум'),
+        ('standard', 'Стандарт'),
+        ('pro', 'Бизнес'),
+        ('max', 'Максимум'),
     ]
 
     # OneToOneField гарантирует, что у одного юзера может быть строго один профиль

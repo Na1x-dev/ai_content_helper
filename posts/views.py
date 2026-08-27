@@ -20,39 +20,63 @@ class GeneratedPostViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return GeneratedPost.objects.filter(user=self.request.user)
 
-    # 1. Улучшение: Получение лимитов и автосброс раз в сутки
+    # 1. Получение лимитов и автосброс раз в сутки с учетом новых тарифов
     @action(detail=False, methods=['get'], url_path='user-limits')
     def user_limits(self, request):
-        """Возвращает информацию о текущем тарифе и лимитах пользователя"""
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
-        
         today = timezone.now().date()
+        
         if profile.last_reset < today:
-            profile.generations_left = 3 if profile.plan == 'free' else 100
+            # Маппинг тарифов на количество ежедневных генераций
+            limits_map = {
+                'free': 3,
+                'standard': 25,
+                'pro': 50,
+                'max': 100
+            }
+            profile.generations_left = limits_map.get(profile.plan, 3)
             profile.last_reset = today
             profile.save()
             
         return Response({
             "plan": profile.get_plan_display(),
+            "plan_code": profile.plan, # Передаем код тарифа на фронтенд для подсветки активного
             "generations_left": profile.generations_left
         })
 
-    # 2. Улучшение: Симуляция оплаты тарифа Premium PRO
+
+    # 2. Симуляция оплаты тарифа (теперь принимает тип тарифа в body)
+        # posts/views.py внутри GeneratedPostViewSet
+        # posts/views.py внутри GeneratedPostViewSet
     @action(detail=False, methods=['post'], url_path='buy-premium')
     def buy_premium(self, request):
-        """Имитирует успешную оплату эквайринга и активирует Премиум"""
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        chosen_plan = request.data.get('plan')
         
-        profile.plan = 'premium'
-        profile.generations_left = 100
+        # Маппинг лимитов для всех доступных планов
+        plan_limits = {
+            'free': 3,
+            'standard': 25,
+            'pro': 50,
+            'max': 100
+        }
+        
+        if chosen_plan not in plan_limits:
+            return Response({"success": False, "message": "Неверный тарифный план"}, status=400)
+            
+        # Меняем тариф на любой выбранный (хоть апгрейд, хоть даунгрейд)
+        profile.plan = chosen_plan
+        profile.generations_left = plan_limits[chosen_plan]
         profile.save()
         
         return Response({
             "success": True,
-            "message": "Подписка Premium PRO успешно активирована!",
+            "message": f"Вы успешно переключились на тариф «{profile.get_plan_display()}»!",
             "plan": profile.get_plan_display(),
             "generations_left": profile.generations_left
         })
+
+
 
     # 3. Улучшение: Перехват и внедрение тональности текста (Style/Tone)
     def perform_create(self, serializer):
@@ -60,10 +84,13 @@ class GeneratedPostViewSet(viewsets.ModelViewSet):
         profile, _ = UserProfile.objects.get_or_create(user=user)
         
         today = timezone.now().date()
+                # Находим эту строчку в perform_create и меняем старый if-else на динамический маппинг:
         if profile.last_reset < today:
-            profile.generations_left = 3 if profile.plan == 'free' else 100
+            limits_map = {'free': 3, 'standard': 25, 'pro': 50, 'max': 100}
+            profile.generations_left = limits_map.get(profile.plan, 3)
             profile.last_reset = today
             profile.save()
+
             
         if profile.generations_left <= 0:
             raise ValidationError({"error": "Вы исчерпали дневной лимит генераций."})
