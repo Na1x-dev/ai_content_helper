@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   db:
     image: postgres:15-alpine
@@ -8,58 +10,72 @@ services:
       POSTGRES_PASSWORD: ai_password
       POSTGRES_DB: ai_content_db
     ports:
-      - "5431:5432"
+      - "5432:5432" # Вынесли стандартный порт наружу для удобства локальной отладки
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_user -d ai_content_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:7-alpine
+    container_name: ai_helper_redis
     ports:
-      - "6373:6379"
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   web:
     build: .
-    command: python manage.py runserver 0.0.0.0:8000
+    # Команда сначала ждет БД, делает миграции, а затем запускает сервер
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py init &&
+             python manage.py runserver 0.0.0.0:8000"
     volumes:
       - .:/app
     ports:
       - "8000:8000"
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - AI_MOCK_MODE=True # Пока тестируем локально, включим заглушку
+    env_file:
+      - .env
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   celery_worker:
     build: .
-    command: celery -A core worker --loglevel=info # замени core на имя папки проекта
+    command: celery -A core worker --loglevel=info
     volumes:
       - .:/app
-    environment:
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      - AI_MOCK_MODE=True
+    env_file:
+      - .env
     depends_on:
-      - redis
-      - db
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   frontend:
     build: ./ai_content_helper_front
     container_name: ai_helper_front
     volumes:
       - ./ai_content_helper_front:/app
-      - /app/node_modules # Чтобы локальные node_modules не затирали контейнерные
+      - /app/node_modules
     ports:
       - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:8000/api/
-  # Сначала запустятся бэк, база и редис, и только потом фронт\
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+    env_file:
+      - .env
     depends_on:
       - web
 
 volumes:
   postgres_data:
-

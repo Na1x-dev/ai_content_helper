@@ -1,116 +1,126 @@
-import React, { useState, useEffect } from 'react';
-import API from '../api';
+import React, { useState, useEffect } from "react";
+import API from "../api";
 
 export default function AuthForm({ onAuthSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({ username: '', email: '', password: '', password2: '' });
-  const [error, setError] = useState('');
-  const [googleStatus, setGoogleStatus] = useState('Инициализация Google Auth...');
+  const [formData, setFormData] = useState({
+    username: "",
+    email: "",
+    password: "",
+    password2: "",
+  });
+  const [error, setError] = useState("");
+  const [googleStatus, setGoogleStatus] = useState(
+    "Инициализация Google Auth...",
+  );
 
   // Извлекаем клиентский ID напрямую из окружения Vite
-  const clientId = import.meta.env.GOOGLE_CLIENT_ID;
-
-
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   useEffect(() => {
-  let checkInterval; 
-   console.log(clientId)
-  const initGoogleAuth = () => {
-    if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-      
-      if (checkInterval) clearInterval(checkInterval);
-      
-      if (!clientId) {
-        setGoogleStatus("Ошибка: Проверьте GOOGLE_CLIENT_ID в файле .env");
-        return;
-      }
-      
-      try {
-        google.accounts.id.initialize({
-          client_id: clientId,
-          callback: handleGoogleLoginSuccess,
-        });
-       
-        const btnContainer = document.getElementById("googleBtn");
-        if (btnContainer) {
-   
-          google.accounts.id.renderButton(btnContainer, {
-            theme: "outline",
-            size: "large",
-            width: btnContainer.offsetWidth || 340,
-            text: "signin_with",
-            shape: "rectangular"
-          });
+    let checkInterval;
+    console.log(clientId);
+    const initGoogleAuth = () => {
+      if (
+        typeof google !== "undefined" &&
+        google.accounts &&
+        google.accounts.id
+      ) {
+        if (checkInterval) clearInterval(checkInterval);
+
+        if (!clientId) {
+          setGoogleStatus("Ошибка: Проверьте GOOGLE_CLIENT_ID в файле .env");
+          return;
         }
-        setGoogleStatus(""); // Успешно отрендерено, убираем лог загрузки
-      } catch (err) {
-        console.error("Ошибка при рендере кнопки Google:", err);
-        setGoogleStatus("Не удалось отобразить кнопку Google");
+
+        try {
+          google.accounts.id.initialize({
+            client_id: clientId,
+            callback: handleGoogleLoginSuccess,
+          });
+
+          const btnContainer = document.getElementById("googleBtn");
+          if (btnContainer) {
+            google.accounts.id.renderButton(btnContainer, {
+              theme: "outline",
+              size: "large",
+              width: btnContainer.offsetWidth || 340,
+              text: "signin_with",
+              shape: "rectangular",
+            });
+          }
+          setGoogleStatus(""); // Успешно отрендерено, убираем лог загрузки
+        } catch (err) {
+          console.error("Ошибка при рендере кнопки Google:", err);
+          setGoogleStatus("Не удалось отобразить кнопку Google");
+        }
       }
-    }
-  };
+    };
 
-  // Проверяем доступность объекта google каждые 300мс
-  checkInterval = setInterval(initGoogleAuth, 300);
-  
-  return () => {
-    if (checkInterval) clearInterval(checkInterval);
-  };
-}, [isLogin, clientId]);
+    // Проверяем доступность объекта google каждые 300мс
+    checkInterval = setInterval(initGoogleAuth, 300);
 
+    return () => {
+      if (checkInterval) clearInterval(checkInterval);
+    };
+  }, [isLogin, clientId]);
 
   const handleGoogleLoginSuccess = async (googleResponse) => {
-    setError('');
+    setError("");
     try {
-      const response = await API.post('auth/google/', {
-        access_token: googleResponse.credential
+      const response = await API.post("auth/google/", {
+        access_token: googleResponse.credential,
       });
 
       if (response.data && response.data.access) {
-        localStorage.setItem('access_token', response.data.access);
+        localStorage.setItem("access_token", response.data.access);
         onAuthSuccess();
       } else {
         setError("Ошибка Google авторизации: сервер не вернул JWT-токен.");
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Не удалось авторизоваться через Google-аккаунт.');
+      setError(
+        err.response?.data?.error ||
+          "Не удалось авторизоваться через Google-аккаунт.",
+      );
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    const endpoint = isLogin ? 'auth/login/' : 'auth/registration/';
+    setError("");
+    const endpoint = isLogin ? "auth/login/" : "auth/registration/";
     const payload = isLogin
       ? { username: formData.username, password: formData.password }
       : {
           username: formData.username,
           email: formData.email,
           password1: formData.password,
-          password2: formData.password2
+          password2: formData.password2,
         };
 
     try {
       const response = await API.post(endpoint, payload);
       if (response.data && response.data.access) {
-        localStorage.setItem('access_token', response.data.access);
-        localStorage.setItem('username', response.data.user.username); 
+        localStorage.setItem("access_token", response.data.access);
+        localStorage.setItem("username", response.data.user.username);
         onAuthSuccess();
       } else {
         setError("Ошибка авторизации: не получен токен доступа.");
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Проверьте корректность введенных данных.');
+      setError(
+        err.response?.data?.error || "Проверьте корректность введенных данных.",
+      );
     }
   };
 
   return (
     <div className="w-full max-w-md mx-4 animate-fade-in z-10">
       <div className="card-bg backdrop-blur-xl border shadow-xl rounded-3xl p-8 md:p-10 transition-colors duration-200">
-        
         <div className="mb-6 text-center">
           <h2 className="text-xl font-bold tracking-tight mb-1.5 dark:text-white text-slate-900">
-            {isLogin ? 'Войти в личный кабинет' : 'Регистрация в SaaS'}
+            {isLogin ? "Войти в личный кабинет" : "Регистрация в SaaS"}
           </h2>
           <p className="text-xs dark:text-slate-400 text-slate-500">
             Добро пожаловать в ИИ-студию генерации контента
@@ -135,7 +145,9 @@ export default function AuthForm({ onAuthSuccess }) {
 
         <div className="relative flex py-2 items-center my-4">
           <div className="flex-grow border-t dark:border-slate-800 border-slate-200"></div>
-          <span className="flex-shrink mx-4 dark:text-slate-500 text-slate-400 text-[11px] uppercase font-bold tracking-wider">или</span>
+          <span className="flex-shrink mx-4 dark:text-slate-500 text-slate-400 text-[11px] uppercase font-bold tracking-wider">
+            или
+          </span>
           <div className="flex-grow border-t dark:border-slate-800 border-slate-200"></div>
         </div>
 
@@ -146,7 +158,9 @@ export default function AuthForm({ onAuthSuccess }) {
               placeholder="Имя пользователя"
               className="w-full px-4 py-3 rounded-xl input-bg border text-sm focus:outline-none focus:border-cyan-500/80 focus:ring-4 focus:ring-cyan-500/10 transition-all"
               value={formData.username}
-              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, username: e.target.value })
+              }
               required
             />
           </div>
@@ -158,7 +172,9 @@ export default function AuthForm({ onAuthSuccess }) {
                 placeholder="Электронная почта"
                 className="w-full px-4 py-3 rounded-xl input-bg border text-sm focus:outline-none focus:border-cyan-500/80 focus:ring-4 focus:ring-cyan-500/10 transition-all"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 required
               />
             </div>
@@ -170,7 +186,9 @@ export default function AuthForm({ onAuthSuccess }) {
               placeholder="Пароль"
               className="w-full px-4 py-3 rounded-xl input-bg border text-sm focus:outline-none focus:border-cyan-500/80 focus:ring-4 focus:ring-cyan-500/10 transition-all"
               value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, password: e.target.value })
+              }
               required
             />
           </div>
@@ -182,7 +200,9 @@ export default function AuthForm({ onAuthSuccess }) {
                 placeholder="Повторите пароль"
                 className="w-full px-4 py-3 rounded-xl input-bg border text-sm focus:outline-none focus:border-cyan-500/80 focus:ring-4 focus:ring-cyan-500/10 transition-all"
                 value={formData.password2}
-                onChange={(e) => setFormData({ ...formData, password2: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, password2: e.target.value })
+                }
                 required
               />
             </div>
@@ -192,17 +212,17 @@ export default function AuthForm({ onAuthSuccess }) {
             type="submit"
             className="w-full bg-slate-900 dark:bg-cyan-600 hover:bg-slate-800 dark:hover:bg-cyan-500 text-white font-medium py-3 rounded-xl transition duration-200 text-sm shadow-sm cursor-pointer"
           >
-            {isLogin ? 'Авторизоваться' : 'Создать аккаунт'}
+            {isLogin ? "Авторизоваться" : "Создать аккаунт"}
           </button>
         </form>
 
         <div className="mt-6 text-center text-xs dark:text-slate-500 text-slate-400">
-          {isLogin ? 'Нет аккаунта? ' : 'Уже зарегистрированы? '}
+          {isLogin ? "Нет аккаунта? " : "Уже зарегистрированы? "}
           <button
             onClick={() => setIsLogin(!isLogin)}
             className="text-cyan-600 dark:text-cyan-400 hover:underline font-semibold ml-1 transition"
           >
-            {isLogin ? 'Зарегистрироваться' : 'Войти'}
+            {isLogin ? "Зарегистрироваться" : "Войти"}
           </button>
         </div>
       </div>
