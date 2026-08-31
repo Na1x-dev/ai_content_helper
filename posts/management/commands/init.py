@@ -3,7 +3,10 @@ from django.core.management.base import BaseCommand
 from django.contrib.sites.models import Site
 from allauth.socialaccount.models import SocialApp
 from django.contrib.auth.models import User
+from posts.models import PricingPlan
 
+
+        
 class Command(BaseCommand):
     help = "Автоматическая настройка Sites, Google Auth и суперпользователя при старте"
 
@@ -38,6 +41,73 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.WARNING("⚠️ ВНИМАНИЕ: VITE_GOOGLE_CLIENT_ID или SECRET не найдены в .env. Настройка Google Auth пропущена."))
 
+
+
+        # 4. Инициализация тарифных планов в БД
+        self.stdout.write("💳 Проверка и создание тарифных планов...")
+        
+        default_plans = [
+            {
+                "code": "free",
+                "title": "Базовый доступ",
+                "subtitle": "Для знакомства с платформой",
+                "price": 0,
+                "period": "/ навсегда",
+                "generations_limit": 3,
+                "features": ["3 публикации в сутки", "Поддержка Telegram, VC.ru, X", "Стандартная скорость"],
+                "is_popular": False,
+                "weight": 0
+            },
+            {
+                "code": "standard",
+                "title": "Стандартный",
+                "subtitle": "Для начинающих авторов",
+                "price": 500,
+                "period": "/ месяц",
+                "generations_limit": 25,
+                "features": ["25 публикаций в сутки", "Повышенная скорость генерации", "Улучшенное качество текста"],
+                "is_popular": False,
+                "weight": 1
+            },
+            {
+                "code": "pro",
+                "title": "Продвинутый",
+                "subtitle": "Для активных блогеров",
+                "price": 900,
+                "period": "/ месяц",
+                "generations_limit": 50,
+                "features": ["50 публикаций в сутки", "Максимальная скорость генерации", "Аналитика стилей автора", "Поддержка 24/7"],
+                "is_popular": True,
+                "weight": 2
+            },
+            {
+                "code": "max",
+                "title": "Максимальный",
+                "subtitle": "Для контент-студий",
+                "price": 1600,
+                "period": "/ месяц",
+                "generations_limit": 100,
+                "features": ["100 публикаций в сутки", "Выделенный сервер для генераций", "Доступ ко всем новым ИИ-моделям"],
+                "is_popular": False,
+                "weight": 3
+            }
+        ]
+
+        for plan_data in default_plans:
+            plan, created = PricingPlan.objects.update_or_create(
+                code=plan_data["code"],
+                defaults=plan_data
+            )
+            if created:
+                self.stdout.write(f"  ➕ Создан тариф: {plan.title}")
+            else:
+                self.stdout.write(f"  🔄 Обновлен тариф: {plan.title}")
+    
+
+
+
+
+
         # 3. Бонус: Автоматическое создание суперпользователя для админки, если его нет
         admin_user = os.getenv("ADMIN_USER", "admin")
         admin_email = os.getenv("ADMIN_EMAIL", "admin@example.com")
@@ -54,3 +124,6 @@ class Command(BaseCommand):
             self.stdout.write("ℹ️ Суперпользователь уже существует.")
 
         self.stdout.write(self.style.SUCCESS("🎉 Инициализация базы данных успешно завершена!"))
+
+
+

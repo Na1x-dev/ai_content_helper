@@ -14,67 +14,59 @@ from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView
 
+from .serializers import PricingPlanSerializer
+from .models import PricingPlan
+from rest_framework.permissions import AllowAny
+
+
 class GeneratedPostViewSet(viewsets.ModelViewSet):
     serializer_class = GeneratedPostSerializer
 
     def get_queryset(self):
         return GeneratedPost.objects.filter(user=self.request.user)
 
-    # 1. Получение лимитов и автосброс раз в сутки с учетом новых тарифов
+       # 1. Получение лимитов и автосброс раз в сутки из параметров модели PricingPlan
     @action(detail=False, methods=['get'], url_path='user-limits')
     def user_limits(self, request):
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
         today = timezone.now().date()
         
         if profile.last_reset < today:
-            # Маппинг тарифов на количество ежедневных генераций
-            limits_map = {
-                'free': 3,
-                'standard': 25,
-                'pro': 50,
-                'max': 100
-            }
-            profile.generations_left = limits_map.get(profile.plan, 3)
+            # Больше никаких limits_map! Берем лимит напрямую из привязанного тарифа
+            profile.generations_left = profile.plan.generations_limit
             profile.last_reset = today
             profile.save()
             
         return Response({
-            "plan": profile.get_plan_display(),
-            "plan_code": profile.plan, # Передаем код тарифа на фронтенд для подсветки активного
+            "plan": profile.plan.title,
+            "plan_code": profile.plan.code,
             "generations_left": profile.generations_left
         })
 
-
-    # 2. Симуляция оплаты тарифа (теперь принимает тип тарифа в body)
-        # posts/views.py внутри GeneratedPostViewSet
-        # posts/views.py внутри GeneratedPostViewSet
+    # 2. Симуляция смены тарифа (динамический поиск в БД)
     @action(detail=False, methods=['post'], url_path='buy-premium')
     def buy_premium(self, request):
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
-        chosen_plan = request.data.get('plan')
+        chosen_plan_code = request.data.get('plan')
         
-        # Маппинг лимитов для всех доступных планов
-        plan_limits = {
-            'free': 3,
-            'standard': 25,
-            'pro': 50,
-            'max': 100
-        }
-        
-        if chosen_plan not in plan_limits:
+        # Ищем тариф в базе данных
+        try:
+            chosen_plan = PricingPlan.objects.get(code=chosen_plan_code)
+        except PricingPlan.DoesNotExist:
             return Response({"success": False, "message": "Неверный тарифный план"}, status=400)
             
-        # Меняем тариф на любой выбранный (хоть апгрейд, хоть даунгрейд)
+        # Меняем тариф и сразу обновляем дневной лимит
         profile.plan = chosen_plan
-        profile.generations_left = plan_limits[chosen_plan]
+        profile.generations_left = chosen_plan.generations_limit
         profile.save()
         
         return Response({
             "success": True,
-            "message": f"Вы успешно переключились на тариф «{profile.get_plan_display()}»!",
-            "plan": profile.get_plan_display(),
+            "message": f"Вы успешно переключились на тариф «{chosen_plan.title}»!",
+            "plan": chosen_plan.title,
             "generations_left": profile.generations_left
         })
+
 
 
 
@@ -86,8 +78,7 @@ class GeneratedPostViewSet(viewsets.ModelViewSet):
         today = timezone.now().date()
                 # Находим эту строчку в perform_create и меняем старый if-else на динамический маппинг:
         if profile.last_reset < today:
-            limits_map = {'free': 3, 'standard': 25, 'pro': 50, 'max': 100}
-            profile.generations_left = limits_map.get(profile.plan, 3)
+            profile.generations_left = profile.plan.generations_limit
             profile.last_reset = today
             profile.save()
 
@@ -120,7 +111,7 @@ class GoogleLogin(SocialLoginView):
     """Эндпоинт для входа через Google Account"""
     adapter_class = GoogleOAuth2Adapter
     client_class = OAuth2Client
-    callback_url = 'http://127.0.0'
+    callback_url = 'http://127.0.0.1'
 
     @property
     def callback_url_computed(self):
@@ -130,3 +121,10 @@ class GoogleLogin(SocialLoginView):
         if 'access_token' in request.data and 'id_token' not in request.data:
             request.data['id_token'] = request.data['access_token']
         return super().post(request, *args, **kwargs)
+
+
+
+class PricingPlanViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = PricingPlan.objects.all()
+    serializer_class = PricingPlanSerializer
+    permission_classes = [AllowAny]

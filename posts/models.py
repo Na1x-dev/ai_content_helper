@@ -3,6 +3,29 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+
+
+class PricingPlan(models.Model):
+    code = models.CharField(max_length=20, unique=True, verbose_name="Код тарифа (slug)")
+    title = models.CharField(max_length=50, verbose_name="Название")
+    subtitle = models.CharField(max_length=100, verbose_name="Подзаголовок")
+    price = models.IntegerField(verbose_name="Цена (руб)")
+    period = models.CharField(max_length=20, verbose_name="Период (например, '/ месяц')")
+    generations_limit = models.IntegerField(verbose_name="Лимит генераций в сутки")
+    features = models.JSONField(verbose_name="Список возможностей (массив строк)")
+    is_popular = models.BooleanField(default=False, verbose_name="Метка 'Популярно'")
+    weight = models.IntegerField(default=0, verbose_name="Вес (для апгрейдов/даунгрейдов)")
+
+    class Meta:
+        verbose_name = "Тарифный план"
+        verbose_name_plural = "Тарифные планы"
+        ordering = ['weight']
+
+    def __str__(self):
+        return f"{self.title} ({self.price} руб)"
+
+
+
 class UserProfile(models.Model):
     PLAN_CHOICES = [
         ('free', 'Бесплатный'),
@@ -15,7 +38,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', verbose_name="Пользователь")
     
     # Текущий тарифный план
-    plan = models.CharField(max_length=10, choices=PLAN_CHOICES, default='free', verbose_name="Тариф")
+    plan = models.ForeignKey(PricingPlan, on_delete=models.PROTECT, related_name='profiles', verbose_name="Тариф")
     
     # Сколько генераций осталось на сегодня
     generations_left = models.IntegerField(default=3, verbose_name="Осталось генераций")
@@ -31,12 +54,13 @@ class UserProfile(models.Model):
         verbose_name_plural = "Профили пользователей"
 
 
-# --- СИГНАЛЫ АВТОСОЗДАНИЯ ПРОФИЛЯ ---
-# Этот код автоматически создаст UserProfile, как только в базе появится новый User
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
-        UserProfile.objects.create(user=instance)
+        # Берём самый базовый тариф по умолчанию (обычно с минимальным весом)
+        free_plan = PricingPlan.objects.filter(code='free').first()
+        UserProfile.objects.create(user=instance, plan=free_plan, generations_left=free_plan.generations_limit if free_plan else 3)
+
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
@@ -67,3 +91,4 @@ class GeneratedPost(models.Model):
         verbose_name = "Сгенерированный пост"
         verbose_name_plural = "Сгенерированные посты"
         ordering = ['-created_at']
+
