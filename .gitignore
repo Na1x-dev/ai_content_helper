@@ -3,6 +3,8 @@ client_secret.json
 # Секреты и конфигурация (Самое важное!)
 .env
 .env.dev
+.env.production
+.env.local
 
 # Виртуальное окружение Python
 venv/

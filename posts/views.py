@@ -6,10 +6,11 @@ from django.contrib.auth.models import User
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import GeneratedPost, UserProfile
+from .models import GeneratedPost, UserProfile, AITone
 from .serializers import GeneratedPostSerializer
 from .tasks import task_generate_ai_post
 
+from django.db import transaction
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView
@@ -32,7 +33,6 @@ class GeneratedPostViewSet(viewsets.ModelViewSet):
         today = timezone.now().date()
         
         if profile.last_reset < today:
-            # Больше никаких limits_map! Берем лимит напрямую из привязанного тарифа
             profile.generations_left = profile.plan.generations_limit
             profile.last_reset = today
             profile.save()
@@ -71,10 +71,10 @@ class GeneratedPostViewSet(viewsets.ModelViewSet):
 
 
     # 3. Улучшение: Перехват и внедрение тональности текста (Style/Tone)
+    @transaction.atomic
     def perform_create(self, serializer):
         user = self.request.user
         profile, _ = UserProfile.objects.get_or_create(user=user)
-        
         today = timezone.now().date()
                 # Находим эту строчку в perform_create и меняем старый if-else на динамический маппинг:
         if profile.last_reset < today:
@@ -91,31 +91,29 @@ class GeneratedPostViewSet(viewsets.ModelViewSet):
         profile.save()
 
         # Вытаскиваем тональность из входящего JSON от фронтенда
-        tone = self.request.data.get('tone', 'neutral')
-        tone_labels = {
-            'friendly': 'Тональность: дружелюбная, теплая и разговорная.',
-            'business': 'Тональность: строгая, профессиональная, деловая.',
-            'funny': 'Тональность: с юмором, легкой иронией или шутками.',
-            'neutral': 'Тональность: сбалансированная, нейтральная.'
-        }
-        selected_tone_instruction = tone_labels.get(tone, '')
+        tone_code = self.request.data.get('tone', 'neutral')
+        try:
+            tone_obj = AITone.objects.get(code=tone_code)
+            selected_tone_instruction = tone_obj.instruction_text
+        except AITone.DoesNotExist:
+            selected_tone_instruction = "Тональность: нейтральная."
 
         # Склеиваем основной текст промпта с инструкцией тональности для OpenAI
         full_prompt = f"{serializer.validated_data['prompt']} [{selected_tone_instruction}]"
         
         # Сохраняем пост в БД со статусом 'processing' и отправляем в Celery
         post = serializer.save(user=user, prompt=full_prompt)
-        task_generate_ai_post.delay(post.id)
+        transaction.on_commit(lambda: task_generate_ai_post.delay(post.id))
+
 
 class GoogleLogin(SocialLoginView):
     """Эндпоинт для входа через Google Account"""
     adapter_class = GoogleOAuth2Adapter
     client_class = OAuth2Client
-    callback_url = 'http://127.0.0.1'
 
     @property
-    def callback_url_computed(self):
-        return self.callback_url
+    def callback_url(self):
+        return os.getenv("GOOGLE_AUTH_CALLBACK_URL", "http://localhost:5173")
 
     def post(self, request, *args, **kwargs):
         if 'access_token' in request.data and 'id_token' not in request.data:

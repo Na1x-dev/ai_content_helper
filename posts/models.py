@@ -67,24 +67,38 @@ def save_user_profile(sender, instance, **kwargs):
     instance.profile.save()
 
 
+
+class AIPlatform(models.Model):
+    code = models.CharField(max_length=10, unique=True, verbose_name="Код платформы (slug, например, tg)")
+    name = models.CharField(max_length=50, verbose_name="Название (для фронтенда)")
+    system_instruction = models.TextField(verbose_name="Системная инструкция для OpenAI")
+
+    class Meta:
+        verbose_name = "ИИ-Платформа"
+        verbose_name_plural = "ИИ-Платформы"
+
+    def __str__(self):
+        return self.name
+
+class AITone(models.Model):
+    code = models.CharField(max_length=20, unique=True, verbose_name="Код тональности (slug, например, business)")
+    name = models.CharField(max_length=50, verbose_name="Название (для фронтенда)")
+    instruction_text = models.TextField(verbose_name="Текст инструкции (добавляется к промпту)")
+
+    class Meta:
+        verbose_name = "Тональность текста"
+        verbose_name_plural = "Тональности текста"
+
+    def __str__(self):
+        return self.name
+
+# Обновляем модель GeneratedPost, чтобы она ссылалась на новые справочники (опционально для целостности данных)
 class GeneratedPost(models.Model):
-    PLATFORM_CHOICES = [
-        ('tg', 'Telegram'),
-        ('vc', 'VC.ru'),
-        ('tw', 'Twitter/X'),
-    ]
-
-    STATUS_CHOICES = [
-        ('processing', 'Генерируется ИИ'),
-        ('completed', 'Готово'),
-        ('failed', 'Ошибка генерации'),
-    ]
-
     user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Пользователь")
     prompt = models.CharField(max_length=255, verbose_name="Запрос пользователя")
     text = models.TextField(verbose_name="Текст поста", blank=True, null=True)
-    platform = models.CharField(max_length=2, choices=PLATFORM_CHOICES, default='tg', verbose_name="Платформа")
-    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='processing', verbose_name='Статус')
+    platform = models.CharField(max_length=10, verbose_name="Платформа") # Увеличили max_length
+    status = models.CharField(max_length=15, default='processing', verbose_name='Статус')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
 
     class Meta:

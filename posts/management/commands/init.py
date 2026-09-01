@@ -4,6 +4,7 @@ from django.contrib.sites.models import Site
 from allauth.socialaccount.models import SocialApp
 from django.contrib.auth.models import User
 from posts.models import PricingPlan
+from posts.models import AIPlatform, AITone
 
 
         
@@ -126,4 +127,24 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("🎉 Инициализация базы данных успешно завершена!"))
 
 
+
+        self.stdout.write(" Проверка базовых настроек ИИ (Платформы и Тональности)...")
+
+        AIPlatform.objects.update_or_create(
+            code="tg",
+            defaults={"name": "Telegram", "system_instruction": "Ты профессиональный блогер в Telegram. Напиши вовлекающий пост, используй абзацы и эмодзи. Будь краток."}
+        )
+        AIPlatform.objects.update_or_create(
+            code="vc",
+            defaults={"name": "VC.ru", "system_instruction": "Ты эксперт на VC.ru. Напиши структурированную статью с глубоким анализом и подзаголовками."}
+        )
+        AIPlatform.objects.update_or_create(
+            code="tw",
+            defaults={"name": "Twitter / X", "system_instruction": "Ты инфлюенсер в X. Напиши короткий цепляющий пост до 280 символов с хэштегами."}
+        )
+        
+        AITone.objects.update_or_create(code="neutral", defaults={"name": "Нейтральный", "instruction_text": "Стиль: нейтральный, сбалансированный."})
+        AITone.objects.update_or_create(code="friendly", defaults={"name": "Дружелюбный", "instruction_text": "Стиль: дружелюбный, теплый, разговорный."})
+        AITone.objects.update_or_create(code="business", defaults={"name": "Деловой", "instruction_text": "Стиль: строгий, профессиональный, бизнес-язык."})
+        AITone.objects.update_or_create(code="funny", defaults={"name": "Юмористический", "instruction_text": "Стиль: с легким юмором, иронией или шутками."})
 

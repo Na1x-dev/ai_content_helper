@@ -64,19 +64,35 @@ services:
         condition: service_healthy
 
   frontend:
-    build: ./ai_content_helper_front
+    # Переключаем Docker на production сборку
+    build:
+      context: ./ai_content_helper_front
+      dockerfile: Dockerfile.prod
+      args:
+        - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+        - VITE_API_URL=${VITE_API_URL}
     container_name: ai_helper_front
-    volumes:
-      - ./ai_content_helper_front:/app
-      - /app/node_modules
-    ports:
-      - "5173:5173"
-    environment:
-      - VITE_API_URL=http://localhost:8000/api/
+    # В prod-режиме volumes больше не нужны, код «запекается» внутри образа
     env_file:
       - .env
     depends_on:
       - web
 
+  gateway:
+    image: caddy:2-alpine
+    container_name: ai_gateway
+    restart: always
+    ports:
+      - "80:80"   # Для проверки домена
+      - "443:443" # Для безопасного HTTPS
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+
 volumes:
   postgres_data:
+  caddy_data:
+  caddy_config:
