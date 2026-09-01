@@ -19,7 +19,7 @@ export default function AuthForm({ onAuthSuccess }) {
 
   useEffect(() => {
     let checkInterval;
-    console.log(clientId);
+    // console.log(clientId);
     const initGoogleAuth = () => {
       if (
         typeof google !== "undefined" &&
@@ -78,6 +78,8 @@ export default function AuthForm({ onAuthSuccess }) {
 
         if (response.data.user && response.data.user.username) {
           googleUsername = response.data.user.username;
+        } else if (response.data.username) {
+          googleUsername = response.data.username;
         }
 
         localStorage.setItem("username", googleUsername);

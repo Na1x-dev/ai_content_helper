@@ -26,6 +26,10 @@ export default function App() {
     if (loggedUsername) {
       setUsername(loggedUsername);
       localStorage.setItem('username', loggedUsername);
+    } else {
+      // Подстраховка: если имя забыли передать, пробуем забрать из localStorage
+      const savedUser = localStorage.getItem('username');
+      if (savedUser) setUsername(savedUser);
     }
   };
 
