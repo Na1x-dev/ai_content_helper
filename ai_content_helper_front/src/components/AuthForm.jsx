@@ -74,6 +74,13 @@ export default function AuthForm({ onAuthSuccess }) {
 
       if (response.data && response.data.access) {
         localStorage.setItem("access_token", response.data.access);
+        let googleUsername = "Пользователь Google";
+
+        if (response.data.user && response.data.user.username) {
+          googleUsername = response.data.user.username;
+        }
+
+        localStorage.setItem("username", googleUsername);
         onAuthSuccess();
       } else {
         setError("Ошибка Google авторизации: сервер не вернул JWT-токен.");
@@ -89,6 +96,7 @@ export default function AuthForm({ onAuthSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
     const endpoint = isLogin ? "auth/login/" : "auth/registration/";
     const payload = isLogin
       ? { username: formData.username, password: formData.password }
@@ -103,15 +111,91 @@ export default function AuthForm({ onAuthSuccess }) {
       const response = await API.post(endpoint, payload);
       if (response.data && response.data.access) {
         localStorage.setItem("access_token", response.data.access);
-        localStorage.setItem("username", response.data.user.username);
-        onAuthSuccess();
+        if (response.data.user && response.data.user.username) {
+          localStorage.setItem("username", response.data.user.username);
+          onAuthSuccess(response.data.user.username);
+        } else {
+          onAuthSuccess(formData.username);
+        }
       } else {
-        setError("Ошибка авторизации: не получен токен доступа.");
+        setError("Ошибка авторизации: сервер не вернул токен доступа.");
       }
     } catch (err) {
-      setError(
-        err.response?.data?.error || "Проверьте корректность введенных данных.",
-      );
+      if (err.response && err.response.data) {
+        const serverData = err.response.data;
+
+        // Если это словарь с ошибками валидации полей (ошибки 400)
+        if (typeof serverData === "object" && !serverData.error) {
+          // 1. Обработка ошибок ВХОДА (Неверный логин/пароль)
+          if (isLogin) {
+            setError("Неверный логин или пароль.");
+            return;
+          }
+
+          // 2. Обработка ошибок РЕГИСТРАЦИИ (Берем только ПЕРВУЮ ошибку для аккуратности)
+          // Определяем приоритет показа: сначала имя, потом почта, потом пароли
+          const fieldsOrder = [
+            "username",
+            "email",
+            "password1",
+            "password",
+            "password2",
+            "non_field_errors",
+          ];
+          let activeKey = Object.keys(serverData)[0];
+
+          for (const key of fieldsOrder) {
+            if (serverData[key]) {
+              activeKey = key;
+              break;
+            }
+          }
+
+          const rawError = Array.isArray(serverData[activeKey])
+            ? serverData[activeKey][0]
+            : serverData[activeKey];
+
+          // Справочник красивых «человеческих» переходов
+          if (activeKey === "username") {
+            setError("Пользователь с таким именем уже существует.");
+          } else if (activeKey === "email") {
+            setError("Этот Email уже зарегистрирован в системе.");
+          } else if (activeKey === "password1" || activeKey === "password") {
+            // Переводим стандартные технические придирки Django к паролям
+            if (
+              rawError.includes("too short") ||
+              rawError.includes("короткий")
+            ) {
+              setError("Пароль слишком короткий (минимум 8 символов).");
+            } else if (
+              rawError.includes("numeric") ||
+              rawError.includes("цифр")
+            ) {
+              setError("Пароль не должен состоять только из цифр.");
+            } else if (
+              rawError.includes("common") ||
+              rawError.includes("распространен")
+            ) {
+              setError("Этот пароль слишком простой. Придумайте другой.");
+            } else {
+              setError("Введенные пароли не совпадают.");
+            }
+          } else if (activeKey === "password2") {
+            setError("Пароли не совпадают.");
+          } else {
+            setError(rawError || "Проверьте корректность заполнения формы.");
+          }
+        } else {
+          // Если бэкенд передал кастомную ошибку одной строкой
+          setError(
+            serverData.error || "Произошла ошибка при обработке запроса.",
+          );
+        }
+      } else {
+        setError(
+          "Не удалось связаться с сервером. Проверьте интернет-соединение.",
+        );
+      }
     }
   };
 

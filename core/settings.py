@@ -64,6 +64,8 @@ JWT_AUTH_REFRESH_COOKIE = None
 REST_AUTH = {
     'JWT_SERIALIZER': 'dj_rest_auth.serializers.JWTSerializer',
     'USE_JWT': True,
+    'USER_DETAILS_SERIALIZER': 'dj_rest_auth.serializers.UserDetailsSerializer', 
+
 }
 
 
