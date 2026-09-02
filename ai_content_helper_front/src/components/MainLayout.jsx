@@ -3,6 +3,11 @@ import { Zap, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion"; // Импортируем компоненты анимации
 import HeaderButton from "./HeaderButton";
 
+import Dashboard from "./Dashboard";
+import History from "./History";
+import Pricing from "./Pricing";
+import PageTransition from "./PageTransition";
+
 export default function MainLayout({
   tab,
   setTab,
@@ -10,6 +15,7 @@ export default function MainLayout({
   limits,
   onLogout,
   children,
+  fetchLimits,
 }) {
   return (
     <div className="bg-[#0b0f19] min-h-screen flex flex-col relative overflow-x-hidden antialiased text-slate-200 selection:bg-cyan-500/30">
@@ -17,7 +23,7 @@ export default function MainLayout({
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[300px] bg-gradient-to-b from-cyan-500/5 to-indigo-500/0 blur-3xl pointer-events-none z-0"></div>
 
       {/* FIXED HEADER */}
-      <header className="sticky top-0 z-50 w-full backdrop-blur-md bg-[#0b0f19]/80 border-b border-slate-800/80 shadow-sm">
+      <header className="fixed top-0 left-0 right-0 z-50 w-full backdrop-blur-md bg-[#0b0f19]/80 border-b border-slate-800/80 shadow-sm">
         <div className="w-full max-w-7xl mx-auto px-4 md:px-6 h-16 flex justify-between items-center relative z-10">
           {/* ЛЕВАЯ ЧАСТЬ: Логотип и вкладки */}
           <div className="flex items-center gap-6 md:gap-10">
@@ -114,9 +120,27 @@ export default function MainLayout({
         </div>
       </header>
 
-      {/* ОСНОВНОЙ КОНТЕНТ */}
-      <main className="flex-grow flex items-center justify-center relative z-10 w-full max-w-7xl mx-auto p-4 md:p-6">
-        <div className="w-full pt-2">{children}</div>
+      {/* 2. АНИМИРОВАННЫЙ ВЫВОД СТРАНИЦ */}
+      <main className="flex-grow flex items-center justify-center relative z-10 w-full max-w-7xl mx-auto p-4 md:p-6 pt-20">
+        <div className="w-full pt-2">
+          <AnimatePresence mode="wait">
+            {tab === "dash" && (
+              <PageTransition key="dash">
+                <Dashboard limits={limits} fetchLimits={fetchLimits} />
+              </PageTransition>
+            )}
+            {tab === "history" && (
+              <PageTransition key="history">
+                <History />
+              </PageTransition>
+            )}
+            {tab === "pricing" && (
+              <PageTransition key="pricing">
+                <Pricing />
+              </PageTransition>
+            )}
+          </AnimatePresence>
+        </div>
       </main>
     </div>
   );

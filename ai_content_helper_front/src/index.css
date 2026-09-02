@@ -9,8 +9,20 @@
     margin: 0;
     padding: 0;
     transition: background-color 0.2s, color 0.2s;
+    scrollbar-gutter: stable; 
+  }
+
+   html, body {
+    /* min-h-screen;  */
+    overflow-y: overlay; 
+  }
+
+  html {
+    scroll-behavior: smooth; /* Включает плавный скролл по умолчанию */
   }
 }
+
+
 
 /* Настройки тем в зависимости от предпочтений системы */
 @media (prefers-color-scheme: dark) {
@@ -53,5 +65,57 @@
     background-color: rgba(9, 13, 22, 0.8);
     border-color: rgba(30, 41, 59, 0.8);
     color: #e2e8f0;
+  }
+}
+
+
+/* Внутри файла src/index.css */
+@layer base {
+  html, body {
+    /* overflow-y: overlay говорит браузеру рендерить полосу прокрутки ПОВЕРХ страницы, */
+    /* благодаря чему ширина контента (и хедера) не меняется ни на пиксель. */
+    overflow-y: overlay; 
+    
+    /* Дополнительная страховка для старых и специфичных браузеров */
+    scrollbar-gutter: stable both-edges; 
+  }
+}
+
+/* Полная кастомизация скроллбара под дизайн приложения */
+::-webkit-scrollbar {
+  width: 10px;               /* Оптимальная ширина для удобного клика */
+  height: 10px;
+}
+
+/* Дорожку делаем полностью прозрачной */
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Настраиваем сам бегунок */
+::-webkit-scrollbar-thumb {
+  /* Задаем полупрозрачный цвет в тон вашей card-bg (slate-800/60) */
+  background: rgba(30, 41, 59, 0.4); 
+  border-radius: 9999px;
+  
+  /* Хитрый трюк: прозрачная рамка сжимает бегунок, делая его тоньше и изящнее */
+  border: 3px solid transparent; 
+  background-clip: padding-box;
+  
+  transition: background-color 0.2s;
+}
+
+/* Эффект подсветки при наведении на скроллбар */
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(6, 182, 212, 0.5); /* Подсвечиваем циановым цветом */
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Корректировка для браузеров Firefox */
+@supports (scrollbar-color: auto) {
+  html {
+    scrollbar-color: rgba(30, 41, 59, 0.4) transparent;
+    scrollbar-width: thin;
   }
 }
