@@ -35,3 +35,4 @@ Thmubs.db
 /media/
 /staticfiles/
 .pdfignore
+node_modules/

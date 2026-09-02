@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import API from "../api";
+import StableGoogleButton from "./StableGoogleButton";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function AuthForm({ onAuthSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -219,15 +221,12 @@ export default function AuthForm({ onAuthSuccess }) {
           </div>
         )}
 
-        {/* СЕКЦИЯ КНОПКИ GOOGLE */}
-        <div className="mb-5 w-full flex flex-col items-center justify-center min-h-[44px]">
-          {googleStatus && (
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 animate-pulse font-mono">
-              {googleStatus}
-            </p>
-          )}
-          <div id="googleBtn" className="w-full"></div>
-        </div>
+        <StableGoogleButton
+          clientId={clientId}
+          onSuccess={handleGoogleLoginSuccess}
+          setGoogleStatus={setGoogleStatus}
+          googleStatus={googleStatus}
+        />
 
         <div className="relative flex py-2 items-center my-4">
           <div className="flex-grow border-t dark:border-slate-800 border-slate-200"></div>

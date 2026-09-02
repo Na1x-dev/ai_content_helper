@@ -3,33 +3,16 @@ import { Loader2, Sparkles, Send, Layers, Copy, Check } from "lucide-react";
 import API from "../api";
 import CustomSelect from "./CustomSelect";
 
-export default function Dashboard() {
+export default function Dashboard({ limits, fetchLimits }) {
   const [prompt, setPrompt] = useState("");
   const [platform, setPlatform] = useState("tg");
   const [statusText, setStatusText] = useState(
     "Заполните параметры для создания публикации",
   );
   const [generatedText, setGeneratedText] = useState("");
-  const [limits, setLimits] = useState({
-    plan: "Загрузка...",
-    generations_left: 0,
-  });
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
   const [tone, setTone] = useState("neutral");
-
-  const fetchLimits = async () => {
-    try {
-      const response = await API.get("posts/user-limits/");
-      setLimits(response.data);
-    } catch (err) {
-      console.error("Не удалось загрузить лимиты пользователя", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchLimits();
-  }, []);
 
   const handleCopy = async () => {
     if (!generatedText) return;
@@ -53,7 +36,7 @@ export default function Dashboard() {
           setGeneratedText(post.text);
           setStatusText("Текст успешно написан");
           setLoading(false);
-          fetchLimits();
+          if (fetchLimits) fetchLimits();
         } else if (post.status === "failed") {
           setStatusText("Произошел сбой. Пожалуйста, попробуйте позже.");
           clearInterval(interval);
@@ -98,25 +81,6 @@ export default function Dashboard() {
   return (
     <div className="w-full flex flex-col items-stretch gap-6 min-h-[calc(100vh-9rem)]">
       {/* ИНФОРМАЦИОННЫЙ СТАТУС-БАР */}
-      <div className="card-bg backdrop-blur-md px-5 py-4 rounded-2xl border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm">
-        <div className="flex items-center gap-2.5">
-          <Layers size={15} className="text-cyan-500" />
-          <span className="text-slate-400 text-xs font-semibold uppercase tracking-wide">
-            Ваш уровень доступа:
-          </span>
-          <span className="px-2.5 py-0.5 bg-cyan-500/10 text-cyan-400 text-xs font-semibold rounded-lg border border-cyan-500/15">
-            {limits.plan}
-          </span>
-        </div>
-        <div className="text-xs text-slate-400 font-medium">
-          Осталось ежедневных запросов:{" "}
-          <span
-            className={`font-bold ml-1 text-sm ${limits.generations_left > 0 ? "text-emerald-400" : "text-red-400"}`}
-          >
-            {limits.generations_left}
-          </span>
-        </div>
-      </div>
 
       {/* ОСНОВНАЯ РАБОЧАЯ СЕТКА (Фикс наложений: items-stretch заменен на items-start) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start flex-grow">
@@ -159,17 +123,18 @@ export default function Dashboard() {
 
             <button
               type="submit"
-              disabled={loading || limits.generations_left <= 0}
+              disabled={loading || !limits || limits.generations_left <= 0}
               className="w-full mt-2 flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-slate-950 font-bold py-3.5 rounded-xl disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300 text-sm shadow-sm active:scale-[0.99] cursor-pointer"
             >
               {loading ? (
                 <Loader2 className="animate-spin" size={16} />
+              ) : limits?.generations_left <= 0 ? (
+                "Лимит генераций исчерпан"
               ) : (
-                <Send size={14} />
+                <>
+                  <Send size={14} /> Начать генерацию
+                </>
               )}
-              {limits.generations_left <= 0
-                ? "Лимит на сегодня исчерпан"
-                : "Создать публикацию"}
             </button>
           </form>
         </div>
