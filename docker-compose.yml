@@ -31,7 +31,7 @@ services:
       retries: 5
 
   web:
-    build: .
+    build: ./ai_content_helper_back
     # Команда сначала ждет БД, делает миграции, а затем запускает сервер
     command: >
       sh -c "python manage.py makemigrations &&
@@ -39,7 +39,7 @@ services:
              python manage.py init &&
              python manage.py runserver 0.0.0.0:8000"
     volumes:
-      - .:/app
+      - ./ai_content_helper_back:/app
     ports:
       - "8000:8000"
     env_file:
@@ -51,10 +51,10 @@ services:
         condition: service_healthy
 
   celery_worker:
-    build: .
+    build: ./ai_content_helper_back
     command: celery -A core worker --loglevel=info
     volumes:
-      - .:/app
+      - ./ai_content_helper_back:/app
     env_file:
       - .env
     depends_on:
@@ -63,20 +63,36 @@ services:
       redis:
         condition: service_healthy
 
+  # frontend:
+  #   # Переключаем Docker на production сборку
+  #   build:
+  #     context: ./ai_content_helper_front
+  #     dockerfile: Dockerfile.prod
+  #     args:
+  #       - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+  #       - VITE_API_URL=${VITE_API_URL}
+  #   container_name: ai_helper_front
+  #   # В prod-режиме volumes больше не нужны, код «запекается» внутри образа
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - web
+
   frontend:
-    # Переключаем Docker на production сборку
     build:
       context: ./ai_content_helper_front
-      dockerfile: Dockerfile.prod
-      args:
-        - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
-        - VITE_API_URL=${VITE_API_URL}
+      dockerfile: Dockerfile  
     container_name: ai_helper_front
-    # В prod-режиме volumes больше не нужны, код «запекается» внутри образа
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./ai_content_helper_front:/app  
+      - /app/node_modules            
     env_file:
       - .env
     depends_on:
       - web
+
 
   gateway:
     image: caddy:2-alpine

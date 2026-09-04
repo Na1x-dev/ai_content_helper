@@ -98,8 +98,21 @@ class GeneratedPostViewSet(viewsets.ModelViewSet):
         except AITone.DoesNotExist:
             selected_tone_instruction = "Тональность: нейтральная."
 
+        # 2. ИЗВЛЕКАЕМ ДЛИНУ ТЕКСТА (Новая логика!)
+        length_code = self.request.data.get('length', 'medium')
+        length_mapping = {
+            "short": "Объём: ультра-краткий емкий текст, не более 100 слов. Пиши строго по сути.",
+            "medium": "Объём: сбалансированный текст средней длины, примерно 200-250 слов.",
+            "long": "Объём: подробный развернутый лонгрид, около 500 слов, с глубоким раскрытием темы."
+        }
+        selected_length_instruction = length_mapping.get(length_code, length_mapping["medium"])
+
+
         # Склеиваем основной текст промпта с инструкцией тональности для OpenAI
-        full_prompt = f"{serializer.validated_data['prompt']} [{selected_tone_instruction}]"
+        full_prompt = f"{serializer.validated_data['prompt']} [{selected_tone_instruction}] [{selected_length_instruction}]"
+
+        if 'length' in serializer.validated_data:
+            serializer.validated_data.pop('length')
         
         # Сохраняем пост в БД со статусом 'processing' и отправляем в Celery
         post = serializer.save(user=user, prompt=full_prompt)

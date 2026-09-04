@@ -1,121 +1,64 @@
 @import "tailwindcss";
 
 @layer base {
-  body {
-    /* Светлая тема по умолчанию */
-    background-color: #f8fafc;
-    color: #0f172a;
+  html, body {
+    background-color: #040612;
+    color: #f3f4f6;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     margin: 0;
     padding: 0;
-    transition: background-color 0.2s, color 0.2s;
-    scrollbar-gutter: stable; 
+    /* Полностью блокируем прокрутку окна браузера */
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden !important;
   }
-
-   html, body {
-    /* min-h-screen;  */
-    overflow-y: overlay; 
-  }
-
+  
   html {
-    scroll-behavior: smooth; /* Включает плавный скролл по умолчанию */
+    scroll-behavior: smooth;
   }
 }
-
-
-
-/* Настройки тем в зависимости от предпочтений системы */
-@media (prefers-color-scheme: dark) {
-  body {
-    background-color: #0b0f19;
-    color: #f3f4f6;
-  }
-}
-
-/* Интегрируем динамический фон для шапки */
-.header-bg {
-  background-color: rgba(255, 255, 255, 0.8);
-}
-@media (prefers-color-scheme: dark) {
-  .header-bg {
-    background-color: rgba(11, 15, 25, 0.75);
-  }
-}
-
-/* Адаптивный фон для карточек */
-.card-bg {
-  background-color: #ffffff;
-  border-color: #e2e8f0;
-}
-@media (prefers-color-scheme: dark) {
-  .card-bg {
-    background-color: rgba(17, 22, 37, 0.6);
-    border-color: rgba(30, 41, 59, 0.8);
-  }
-}
-
-/* Адаптивный фон для полей ввода */
-.input-bg {
-  background-color: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #0f172a;
-}
-@media (prefers-color-scheme: dark) {
-  .input-bg {
-    background-color: rgba(9, 13, 22, 0.8);
-    border-color: rgba(30, 41, 59, 0.8);
-    color: #e2e8f0;
-  }
-}
-
-
-/* Внутри файла src/index.css */
-@layer base {
-  html, body {
-    /* overflow-y: overlay говорит браузеру рендерить полосу прокрутки ПОВЕРХ страницы, */
-    /* благодаря чему ширина контента (и хедера) не меняется ни на пиксель. */
-    overflow-y: overlay; 
-    
-    /* Дополнительная страховка для старых и специфичных браузеров */
-    scrollbar-gutter: stable both-edges; 
-  }
-}
-
-/* Полная кастомизация скроллбара под дизайн приложения */
+/* Кастомизация скроллбара под дизайн ИИ-студии */
 ::-webkit-scrollbar {
-  width: 10px;               /* Оптимальная ширина для удобного клика */
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
-/* Дорожку делаем полностью прозрачной */
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 
-/* Настраиваем сам бегунок */
 ::-webkit-scrollbar-thumb {
-  /* Задаем полупрозрачный цвет в тон вашей card-bg (slate-800/60) */
   background: rgba(30, 41, 59, 0.4); 
   border-radius: 9999px;
-  
-  /* Хитрый трюк: прозрачная рамка сжимает бегунок, делая его тоньше и изящнее */
-  border: 3px solid transparent; 
+  border: 2px solid transparent; 
   background-clip: padding-box;
-  
   transition: background-color 0.2s;
 }
 
-/* Эффект подсветки при наведении на скроллбар */
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(6, 182, 212, 0.5); /* Подсвечиваем циановым цветом */
-  border: 3px solid transparent;
+  background: rgba(6, 182, 212, 0.5);
+  border: 2px solid transparent;
   background-clip: padding-box;
 }
 
-/* Корректировка для браузеров Firefox */
+/* Фиксы для Firefox */
 @supports (scrollbar-color: auto) {
   html {
     scrollbar-color: rgba(30, 41, 59, 0.4) transparent;
     scrollbar-width: thin;
+  }
+}
+/* Адаптивный фон для карточек (Убираем жесткий белый/светлый контур) */
+.card-bg {
+  background-color: #ffffff;
+  border-color: #e2e8f0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .card-bg {
+    /* Делаем подложку темнее и прозрачнее для лучшего проявления ИИ-сфер */
+    background-color: rgba(9, 13, 32, 0.4); 
+    /* Смягчаем бордер: делаем его полупрозрачным, чтобы он не бил в глаза */
+    border-color: rgba(255, 255, 255, 0.05); 
   }
 }

@@ -30,7 +30,7 @@ export default function PageTransition({ children }) {
       initial="initial"
       animate="animate"
       exit="exit"
-      className="w-full h-full" // Сохраняем размеры контейнера страницы
+      className="w-full h-full bg-transparent" /* <-- Явно указали прозрачность */
     >
       {children}
     </motion.div>

@@ -1,5 +1,13 @@
 # Замените на ваш реальный купленный домен (например, my-saas.com)
+# http://localhost {Маршрутизируем весь внешний защищенный трафик на Nginx фронтенда
+#    reverse_proxy frontend:80 }
+
 http://localhost {
-    # Маршрутизируем весь внешний защищенный трафик на Nginx фронтенда
-    reverse_proxy frontend:80
+    # 1. Все запросы к API и админке Django отправляем напрямую в бэкенд
+    reverse_proxy /api/* web:8000
+    reverse_proxy /admin/* web:8000
+    reverse_proxy /static/admin/* web:8000
+
+    # 2. Всё остальное (весь фронтенд) отправляем на dev-сервер Vite
+    reverse_proxy frontend:5173
 }

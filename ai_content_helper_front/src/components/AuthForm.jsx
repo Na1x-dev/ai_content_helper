@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import API from "../api";
 import StableGoogleButton from "./StableGoogleButton";
 import { motion, AnimatePresence } from "framer-motion";
+import { LogIn, UserPlus, Key, User, Mail, ArrowRight } from "lucide-react";
 
 export default function AuthForm({ onAuthSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -12,10 +13,6 @@ export default function AuthForm({ onAuthSuccess }) {
     password2: "",
   });
   const [error, setError] = useState("");
-  const [googleStatus, setGoogleStatus] = useState(
-    "Инициализация Google Auth...",
-  );
-
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   const handleGoogleLoginSuccess = async (googleResponse) => {
@@ -33,7 +30,7 @@ export default function AuthForm({ onAuthSuccess }) {
         localStorage.setItem("username", googleUsername);
         onAuthSuccess(googleUsername);
       } else {
-        setError("Ошибка Google авторизации: сервер не вернул JWT-токен.");
+        setError("Ошибка Google авторизации: сервер не вернул токен.");
       }
     } catch (err) {
       setError(
@@ -67,22 +64,15 @@ export default function AuthForm({ onAuthSuccess }) {
         setError("Ошибка авторизации: сервер не вернул токен доступа.");
       }
     } catch (err) {
-      // Ваша текущая аккуратная обработка ошибок (сжато для краткости)
       if (err.response && err.response.data) {
         const serverData = err.response.data;
-        if (typeof serverData === "object" && !serverData.error) {
-          if (isLogin) {
-            setError("Неверный логин или пароль.");
-          } else {
-            setError(
-              serverData.username
-                ? "Пользователь существует."
-                : "Проверьте корректность заполнения.",
-            );
-          }
-        } else {
-          setError(serverData.error || "Произошла ошибка.");
-        }
+        setError(
+          isLogin
+            ? "Неверный логин или пароль."
+            : serverData.username
+              ? "Пользователь существует."
+              : "Проверьте данные.",
+        );
       } else {
         setError("Не удалось связаться с сервером.");
       }
@@ -90,41 +80,44 @@ export default function AuthForm({ onAuthSuccess }) {
   };
 
   return (
-    // motion.div с атрибутом layout заставит карточку плавно менять высоту
     <motion.div
       layout
-      className="w-full max-w-md mx-4 z-10"
+      className="w-full max-w-md mx-auto z-10"
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
     >
-      <div className="card-bg backdrop-blur-xl border shadow-xl rounded-3xl p-8 md:p-10 transition-colors duration-200">
-        {/* Заголовок */}
+      <div className="bg-[#090d22]/50 backdrop-blur-2xl border border-slate-800/40 shadow-2xl rounded-[32px] p-6 md:p-8 relative">
+        {/* ХЕДЕР КАРТОЧКИ */}
         <div className="mb-6 text-center">
           <motion.h2
             layout="position"
-            className="text-xl font-bold tracking-tight mb-1.5 dark:text-white text-slate-900"
+            className="text-xl font-black tracking-tight mb-1 text-slate-100 flex items-center justify-center gap-2"
           >
-            {isLogin ? "Войти в личный кабинет" : "Регистрация в SaaS"}
+            {isLogin ? (
+              <LogIn size={18} className="text-cyan-400" />
+            ) : (
+              <UserPlus size={18} className="text-indigo-400" />
+            )}
+            {isLogin ? "Авторизация" : "Регистрация"}
           </motion.h2>
-          <p className="text-xs dark:text-slate-400 text-slate-500">
+          <p className="text-xs text-slate-500">
             Добро пожаловать в ИИ-студию генерации контента
           </p>
         </div>
 
-        {/* Ошибки */}
         <AnimatePresence mode="wait">
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mb-5 p-3.5 bg-red-500/10 border border-red-500/20 text-red-500 dark:text-red-400 rounded-2xl text-xs font-medium"
+              className="mb-4 p-3 bg-red-500/5 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold text-left"
             >
               {error}
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* КНОПКА GOOGLE: вынесена из условий, теперь она статична и никогда не перерисовывается */}
+        {/* GOOGLE BUTTON */}
         <motion.div layout="position">
           <StableGoogleButton
             clientId={clientId}
@@ -132,25 +125,28 @@ export default function AuthForm({ onAuthSuccess }) {
           />
         </motion.div>
 
-        {/* Разделитель */}
         <motion.div
           layout="position"
           className="relative flex py-2 items-center my-4"
         >
-          <div className="flex-grow border-t dark:border-slate-800 border-slate-200"></div>
-          <span className="flex-shrink mx-4 dark:text-slate-500 text-slate-400 text-[11px] uppercase font-bold tracking-wider">
+          <div className="flex-grow border-t border-slate-800/30"></div>
+          <span className="flex-shrink mx-4 text-slate-600 text-[10px] uppercase font-bold tracking-widest">
             или
           </span>
-          <div className="flex-grow border-t dark:border-slate-800 border-slate-200"></div>
+          <div className="flex-grow border-t border-slate-800/30"></div>
         </motion.div>
 
-        {/* Форма с анимированными полями */}
+        {/* ИНПУТЫ БЕЗ ЯРКИХ СВЕТЛЫХ БОРДЕРОВ */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <motion.div layout="position">
+          <motion.div layout="position" className="relative">
+            <User
+              className="absolute left-4 top-3.5 text-slate-500"
+              size={16}
+            />
             <input
               type="text"
               placeholder="Имя пользователя"
-              className="w-full px-4 py-3 rounded-xl input-bg border text-sm focus:outline-none focus:border-cyan-500/80 focus:ring-4 focus:ring-cyan-500/10 transition-all"
+              className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-slate-950/40 border border-slate-800/30 focus:border-cyan-500/50 text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-200"
               value={formData.username}
               onChange={(e) =>
                 setFormData({ ...formData, username: e.target.value })
@@ -165,13 +161,17 @@ export default function AuthForm({ onAuthSuccess }) {
                 initial={{ opacity: 0, height: 0, scale: 0.95 }}
                 animate={{ opacity: 1, height: "auto", scale: 1 }}
                 exit={{ opacity: 0, height: 0, scale: 0.95 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
-                className="overflow-hidden"
+                transition={{ duration: 0.2 }}
+                className="relative overflow-hidden"
               >
+                <Mail
+                  className="absolute left-4 top-3.5 text-slate-500"
+                  size={16}
+                />
                 <input
                   type="email"
                   placeholder="Электронная почта"
-                  className="w-full px-4 py-3 rounded-xl input-bg border text-sm focus:outline-none focus:border-cyan-500/80 focus:ring-4 focus:ring-cyan-500/10 transition-all mb-4"
+                  className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-slate-950/40 border border-slate-800/30 focus:border-cyan-500/50 text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-200 mb-1"
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
@@ -182,11 +182,12 @@ export default function AuthForm({ onAuthSuccess }) {
             )}
           </AnimatePresence>
 
-          <motion.div layout="position">
+          <motion.div layout="position" className="relative">
+            <Key className="absolute left-4 top-3.5 text-slate-500" size={16} />
             <input
               type="password"
               placeholder="Пароль"
-              className="w-full px-4 py-3 rounded-xl input-bg border text-sm focus:outline-none focus:border-cyan-500/80 focus:ring-4 focus:ring-cyan-500/10 transition-all"
+              className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-slate-950/40 border border-slate-800/30 focus:border-cyan-500/50 text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-200"
               value={formData.password}
               onChange={(e) =>
                 setFormData({ ...formData, password: e.target.value })
@@ -201,13 +202,17 @@ export default function AuthForm({ onAuthSuccess }) {
                 initial={{ opacity: 0, height: 0, scale: 0.95 }}
                 animate={{ opacity: 1, height: "auto", scale: 1 }}
                 exit={{ opacity: 0, height: 0, scale: 0.95 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
-                className="overflow-hidden"
+                transition={{ duration: 0.2 }}
+                className="relative overflow-hidden"
               >
+                <Key
+                  className="absolute left-4 top-3.5 text-slate-500"
+                  size={16}
+                />
                 <input
                   type="password"
                   placeholder="Повторите пароль"
-                  className="w-full px-4 py-3 rounded-xl input-bg border text-sm focus:outline-none focus:border-cyan-500/80 focus:ring-4 focus:ring-cyan-500/10 transition-all mt-4"
+                  className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-slate-950/40 border border-slate-800/30 focus:border-cyan-500/50 text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-200 mt-1"
                   value={formData.password2}
                   onChange={(e) =>
                     setFormData({ ...formData, password2: e.target.value })
@@ -221,16 +226,16 @@ export default function AuthForm({ onAuthSuccess }) {
           <motion.button
             layout="position"
             type="submit"
-            className="w-full bg-slate-900 dark:bg-cyan-600 hover:bg-slate-800 dark:hover:bg-cyan-500 text-white font-medium py-3 rounded-xl transition duration-200 text-sm shadow-sm cursor-pointer"
+            className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black py-3.5 rounded-xl transition duration-300 text-sm shadow-lg shadow-cyan-500/10 cursor-pointer flex items-center justify-center gap-2"
           >
-            {isLogin ? "Авторизоваться" : "Создать аккаунт"}
+            <span>{isLogin ? "Войти в кабинет" : "Создать аккаунт"}</span>
+            <ArrowRight size={14} />
           </motion.button>
         </form>
 
-        {/* Переключатель режима */}
         <motion.div
           layout="position"
-          className="mt-6 text-center text-xs dark:text-slate-500 text-slate-400"
+          className="mt-5 text-center text-xs text-slate-500"
         >
           {isLogin ? "Нет аккаунта? " : "Уже зарегистрированы? "}
           <button
@@ -238,7 +243,7 @@ export default function AuthForm({ onAuthSuccess }) {
               setError("");
               setIsLogin(!isLogin);
             }}
-            className="text-cyan-600 dark:text-cyan-400 hover:underline font-semibold ml-1 transition"
+            className="text-cyan-400 hover:text-cyan-300 font-bold ml-1 transition underline decoration-cyan-500/30 underline-offset-4"
           >
             {isLogin ? "Зарегистрироваться" : "Войти"}
           </button>
