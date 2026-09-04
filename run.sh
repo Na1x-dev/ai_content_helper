@@ -20,7 +20,7 @@ fi
 
 # Запуск контейнеров в фоновом режиме (detached)
 echo "📦 Сборка и запуск Docker контейнеров..."
-docker compose up --build -d
+docker compose up --build 
 
 echo "🟢 Проект успешно запущен!"
 echo "💻 Фронтенд (Caddy): http://localhost"
