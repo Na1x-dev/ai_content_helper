@@ -19,4 +19,9 @@ export default defineConfig({
      Vite сам автоматически подставит их в import.meta.env, 
      если они объявлены в системном окружении контейнера.
   */
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: "./src/setupTests.js", // Файл первичной настройки (создадим ниже)
+  },
 });

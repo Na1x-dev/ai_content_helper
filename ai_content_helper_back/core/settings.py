@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google', 
     'posts',
     'corsheaders',
+    'drf_spectacular',
 ]
  
 SITE_ID = 1
@@ -50,7 +51,8 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
-    ]
+    ],
+        'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema', 
 }
 
 
@@ -177,3 +179,27 @@ CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=['http://localho
 
 # Автоматически связывать аккаунт Google с локальным пользователем, если их email совпадают
 SOCIALACCOUNT_ADAPTER = 'allauth.socialaccount.adapter.DefaultSocialAccountAdapter'
+
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'AI Content Helper API',
+    'DESCRIPTION': 'Автоматическая генерация контента с помощью ИИ (SaaS)',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # --- НОВЫЙ БЛОК НАСТРОЕК ДЛЯ JWT АВТОРИЗАЦИИ ---
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SECURITY': [{
+        'jwtAuth': []
+    }],
+    'APPEND_COMPONENTS': {
+        'securitySchemes': {
+            'jwtAuth': {
+                'type': 'http',
+                'scheme': 'bearer',
+                'bearerFormat': 'JWT',
+                'description': 'Введите ваш access токен в поле ниже (без слова Bearer)'
+            }
+        }
+    }
+}
+
