@@ -1,8 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import AuthForm from "./components/AuthForm";
-import Dashboard from "./components/Dashboard";
-import History from "./components/History";
-import Pricing from "./components/Pricing";
 import MainLayout from "./components/MainLayout";
 import { Sparkles, Zap, Shield, History as HistoryIcon } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";

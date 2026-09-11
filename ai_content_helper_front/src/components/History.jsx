@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import API from "../api";
 import {
   Clipboard,
@@ -10,7 +10,7 @@ import {
   AlertCircle,
   FileText,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 export default function History() {
   const [posts, setPosts] = useState([]);

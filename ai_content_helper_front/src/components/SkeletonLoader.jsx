@@ -1,5 +1,3 @@
-import React from "react";
-
 export default function SkeletonLoader() {
   return (
     <div className="w-full space-y-4 animate-pulse p-4 bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-100 dark:border-slate-800/60">

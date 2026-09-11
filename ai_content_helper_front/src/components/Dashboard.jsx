@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Loader2,
   Sparkles,
@@ -69,7 +69,7 @@ export default function Dashboard({ limits, fetchLimits }) {
         }
       } catch (err) {
         clearInterval(interval);
-        setStatusText("Ошибка соединения с сервером.");
+        setStatusText("Ошибка соединения с сервером.", err);
         setLoading(false);
       }
     }, 2000);
@@ -92,7 +92,7 @@ export default function Dashboard({ limits, fetchLimits }) {
       startPolling(response.data.id);
     } catch (err) {
       setLoading(false);
-      setStatusText("Не удалось начать генерацию.");
+      setStatusText("Не удалось начать генерацию.", err);
     }
   };
 
