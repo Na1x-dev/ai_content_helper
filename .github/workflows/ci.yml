@@ -30,11 +30,9 @@ jobs:
     - name: Проверка стиля кода Python (Линтинг Flake8)
       run: |
         cd ai_content_helper_back
-        # Проверяем синтаксические ошибки. Если они есть, CI упадет.
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # Проверяем общие правила стиля (длина строк, пробелы). 
-        # max-line-length=120, чтобы линтер не ругался на длинные строки
-        flake8 . --count --max-line-length=120 --statistics
+        # Запускаем flake8, он сам найдет файл конфигурации .flake8 в корне
+        flake8 . --statistics
+
 
     - name: Запуск тестов Django со сбором покрытия
       env:

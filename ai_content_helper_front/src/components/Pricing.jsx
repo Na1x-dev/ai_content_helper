@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import API from "../api";
 import {
   Check,
@@ -8,7 +8,7 @@ import {
   ShieldCheck,
   Zap,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 export default function Pricing() {
   const [cards, setCards] = useState([]); // Тарифы из БД

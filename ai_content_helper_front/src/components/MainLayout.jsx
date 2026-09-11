@@ -1,5 +1,4 @@
-import React from "react";
-import { Zap, LogOut, Layers } from "lucide-react";
+import { Zap, LogOut } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import HeaderButton from "./HeaderButton";
 import Dashboard from "./Dashboard";
