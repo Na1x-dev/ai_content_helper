@@ -156,3 +156,53 @@ class AIContentAppTestCase(APITestCase):
 
         # Сервер должен вернуть именно тот текст, который мы подложили в Mock
         self.assertEqual(result, "Это потрясающий текст, сгенерированный ИИ!")
+
+    # =========================================================================
+    # БЛОК 5: ДОПОЛНИТЕЛЬНЫЕ ТЕСТЫ ДЛЯ СБРОСА ЛИМИТОВ И CELERY TASK
+    # =========================================================================
+    def test_user_limits_triggers_reset_on_new_day(self):
+        """Проверяем ветку кода, когда last_reset меньше, чем сегодня (сброс лимитов)."""
+        self.client.force_authenticate(user=self.user)
+        
+        # [Arrange] Искусственно «состариваем» дату сброса в базе данных на вчера
+        from datetime import date, timedelta
+        self.profile.last_reset = date.today() - timedelta(days=1)
+        self.profile.generations_left = 0  # Допустим, вчера юзер потратил всё в ноль
+        self.profile.save()
+
+        # [Act] Запрашиваем лимиты
+        response = self.client.get(self.limits_url)
+
+        # [Assert] Проверяем, что сработал автосброс: лимиты снова равны 3
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["generations_left"], 3)
+        
+        # Проверяем, что в БД дата тоже обновилась на сегодняшнюю
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.last_reset, date.today())
+
+    @patch('posts.tasks.PostGenerationService.generate_post_text')
+    def test_celery_task_updates_post_status(self, mock_generate_text):
+        """Прямой тест фоновой задачи Celery из tasks.py."""
+        # Настраиваем заглушку для тяжелого метода генерации текста
+        mock_generate_text.return_value = "Текст из фонового воркера Celery"
+
+        # Создаем тестовый пост со статусом 'processing'
+        post = GeneratedPost.objects.create(
+            user=self.user,
+            prompt="Промпт для Celery",
+            platform="tg",
+            status="processing"
+        )
+
+        # [Act] Напрямую вызываем Celery задачу синхронно (без запуска самого Redis)
+        from posts.tasks import task_generate_ai_post
+        result = task_generate_ai_post(post.id)
+
+        # [Assert] Проверяем, что задача вернула строку об успешном завершении
+        self.assertIn(f"Пост {post.id} успешно сгенерирован.", result)
+
+        # Проверяем, что статус поста в базе изменился на 'completed', а текст записался
+        post.refresh_from_db()
+        self.assertEqual(post.status, "completed")
+        self.assertEqual(post.text, "Текст из фонового воркера Celery")

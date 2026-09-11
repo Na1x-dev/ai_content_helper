@@ -36,3 +36,4 @@ Thmubs.db
 /staticfiles/
 .pdfignore
 node_modules/
+.coverage
