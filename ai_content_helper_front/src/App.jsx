@@ -29,7 +29,7 @@ export default function App() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchLimits();
     }
   }, [isAuthenticated]);
