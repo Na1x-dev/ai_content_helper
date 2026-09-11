@@ -10,7 +10,9 @@ export default function App() {
     !!localStorage.getItem("access_token"),
   );
   const [tab, setTab] = useState("dash");
-  const [username, setUsername] = useState("Пользователь");
+  const [username, setUsername] = useState(() => {
+    return localStorage.getItem("username") || "Пользователь";
+  });
   const [limits, setLimits] = useState({
     plan: "Загрузка...",
     generations_left: 0,
@@ -27,8 +29,7 @@ export default function App() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      const storedUser = localStorage.getItem("username");
-      if (storedUser) setUsername(storedUser);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       fetchLimits();
     }
   }, [isAuthenticated]);
