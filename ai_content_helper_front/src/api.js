@@ -1,5 +1,12 @@
 import axios from "axios";
 
+export const clearSession = () => {
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("username");
+};
+
+export const getAccessToken = () => localStorage.getItem("access_token");
+
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api/",
   withCredentials: true,
@@ -11,7 +18,7 @@ const API = axios.create({
 // Перехватчик для автоматического добавления JWT токена в заголовки
 API.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("access_token");
+    const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -28,8 +35,7 @@ API.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       console.warn("Токен авторизации истек. Выход из системы...");
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("username");
+      clearSession();
       // Принудительно перезагружаем страницу для возврата на экран логина
       window.location.reload();
     }

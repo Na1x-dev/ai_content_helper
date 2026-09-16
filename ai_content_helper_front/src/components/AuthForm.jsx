@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import API from "../api";
 import StableGoogleButton from "./StableGoogleButton";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,83 +15,98 @@ export default function AuthForm({ onAuthSuccess }) {
   const [error, setError] = useState("");
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-  const handleGoogleLoginSuccess = async (googleResponse) => {
-    setError("");
-    try {
-      const response = await API.post("auth/google/", {
-        access_token: googleResponse.credential,
-      });
-      if (response.data && response.data.access) {
-        localStorage.setItem("access_token", response.data.access);
-        let googleUsername =
-          response.data.user?.username ||
-          response.data.username ||
-          "Пользователь Google";
-        localStorage.setItem("username", googleUsername);
-        onAuthSuccess(googleUsername);
-      } else {
-        setError("Ошибка Google авторизации: сервер не вернул токен.");
-      }
-    } catch (err) {
-      setError(
-        err.response?.data?.error ||
-          "Не удалось авторизоваться через Google-аккаунт.",
-      );
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    const endpoint = isLogin ? "auth/login/" : "auth/registration/";
-    const payload = isLogin
-      ? { username: formData.username, password: formData.password }
-      : {
-          username: formData.username,
-          email: formData.email,
-          password1: formData.password,
-          password2: formData.password2,
-        };
-
-    try {
-      const response = await API.post(endpoint, payload);
-      if (response.data && response.data.access) {
-        localStorage.setItem("access_token", response.data.access);
-        const user = response.data.user?.username || formData.username;
-        localStorage.setItem("username", user);
-        onAuthSuccess(user);
-      } else {
-        setError("Ошибка авторизации: сервер не вернул токен доступа.");
-      }
-    } catch (err) {
-      if (err.response && err.response.data) {
-        const serverData = err.response.data;
+  const handleGoogleLoginSuccess = useCallback(
+    async (googleResponse) => {
+      setError("");
+      try {
+        const response = await API.post("auth/google/", {
+          access_token: googleResponse.credential,
+        });
+        if (response.data && response.data.access) {
+          localStorage.setItem("access_token", response.data.access);
+          let googleUsername =
+            response.data.user?.username ||
+            response.data.username ||
+            "Пользователь Google";
+          localStorage.setItem("username", googleUsername);
+          onAuthSuccess(googleUsername);
+        } else {
+          setError("Ошибка Google авторизации: сервер не вернул токен.");
+        }
+      } catch (err) {
         setError(
-          isLogin
-            ? "Неверный логин или пароль."
-            : serverData.username
-              ? "Пользователь существует."
-              : "Проверьте данные.",
+          err.response?.data?.error ||
+            "Не удалось авторизоваться через Google-аккаунт.",
         );
-      } else {
-        setError("Не удалось связаться с сервером.");
       }
-    }
+    },
+    [onAuthSuccess],
+  );
+
+  const handleSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setError("");
+      const endpoint = isLogin ? "auth/login/" : "auth/registration/";
+      const payload = isLogin
+        ? { username: formData.username, password: formData.password }
+        : {
+            username: formData.username,
+            email: formData.email,
+            password1: formData.password,
+            password2: formData.password2,
+          };
+
+      try {
+        const response = await API.post(endpoint, payload);
+        if (response.data && response.data.access) {
+          localStorage.setItem("access_token", response.data.access);
+          const user = response.data.user?.username || formData.username;
+          localStorage.setItem("username", user);
+          onAuthSuccess(user);
+        } else {
+          setError("Ошибка авторизации: сервер не вернул токен доступа.");
+        }
+      } catch (err) {
+        if (err.response && err.response.data) {
+          const serverData = err.response.data;
+          setError(
+            isLogin
+              ? "Неверный логин или пароль."
+              : serverData.username
+                ? "Пользователь существует."
+                : "Проверьте данные.",
+          );
+        } else {
+          setError("Не удалось связаться с сервером.");
+        }
+      }
+    },
+    [formData, isLogin, onAuthSuccess],
+  );
+
+  const updateField = (field) => (event) => {
+    setFormData((current) => ({ ...current, [field]: event.target.value }));
   };
 
   return (
     <motion.div
       layout
-      className="w-full max-w-md mx-auto z-10"
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="auth-form-wrap"
+      transition={{
+        layout: { type: "spring", stiffness: 220, damping: 30, mass: 0.8 },
+      }}
     >
-      <div className="bg-[#090d22]/50 backdrop-blur-2xl border border-slate-800/40 shadow-2xl rounded-[32px] p-6 md:p-8 relative">
+      <motion.div
+        layout
+        transition={{
+          layout: { type: "spring", stiffness: 220, damping: 30, mass: 0.8 },
+        }}
+        className="auth-card"
+      >
         {/* ХЕДЕР КАРТОЧКИ */}
-        <div className="mb-6 text-center">
-          <motion.h2
-            layout="position"
-            className="text-xl font-black tracking-tight mb-1 text-slate-100 flex items-center justify-center gap-2"
-          >
+        <div className="auth-card-header">
+          <motion.h2 className="auth-card-title">
             {isLogin ? (
               <LogIn size={18} className="text-cyan-400" />
             ) : (
@@ -99,8 +114,8 @@ export default function AuthForm({ onAuthSuccess }) {
             )}
             {isLogin ? "Авторизация" : "Регистрация"}
           </motion.h2>
-          <p className="text-xs text-slate-500">
-            Добро пожаловать в ИИ-студию генерации контента
+          <p className="auth-card-subtitle">
+            Войдите, чтобы продолжить работу с идеями
           </p>
         </div>
 
@@ -110,7 +125,7 @@ export default function AuthForm({ onAuthSuccess }) {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mb-4 p-3 bg-red-500/5 border border-red-500/20 text-red-400 rounded-xl text-xs font-semibold text-left"
+              className="auth-error"
             >
               {error}
             </motion.div>
@@ -118,27 +133,22 @@ export default function AuthForm({ onAuthSuccess }) {
         </AnimatePresence>
 
         {/* GOOGLE BUTTON */}
-        <motion.div layout="position">
+        <motion.div className="auth-google-wrap">
           <StableGoogleButton
             clientId={clientId}
             onSuccess={handleGoogleLoginSuccess}
           />
         </motion.div>
 
-        <motion.div
-          layout="position"
-          className="relative flex py-2 items-center my-4"
-        >
-          <div className="flex-grow border-t border-slate-800/30"></div>
-          <span className="flex-shrink mx-4 text-slate-600 text-[10px] uppercase font-bold tracking-widest">
-            или
-          </span>
-          <div className="flex-grow border-t border-slate-800/30"></div>
+        <motion.div className="auth-divider">
+          <div />
+          <span>или</span>
+          <div />
         </motion.div>
 
         {/* ИНПУТЫ БЕЗ ЯРКИХ СВЕТЛЫХ БОРДЕРОВ */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <motion.div layout="position" className="relative">
+        <form onSubmit={handleSubmit} className="auth-fields space-y-4">
+          <motion.div className="relative">
             <User
               className="absolute left-4 top-3.5 text-slate-500"
               size={16}
@@ -146,22 +156,20 @@ export default function AuthForm({ onAuthSuccess }) {
             <input
               type="text"
               placeholder="Имя пользователя"
-              className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-slate-950/40 border border-slate-800/30 focus:border-cyan-500/50 text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-200"
+              className="auth-input"
               value={formData.username}
-              onChange={(e) =>
-                setFormData({ ...formData, username: e.target.value })
-              }
+              onChange={updateField("username")}
               required
             />
           </motion.div>
 
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence initial={false} mode="sync">
             {!isLogin && (
               <motion.div
-                initial={{ opacity: 0, height: 0, scale: 0.95 }}
-                animate={{ opacity: 1, height: "auto", scale: 1 }}
-                exit={{ opacity: 0, height: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                 className="relative overflow-hidden"
               >
                 <Mail
@@ -171,38 +179,34 @@ export default function AuthForm({ onAuthSuccess }) {
                 <input
                   type="email"
                   placeholder="Электронная почта"
-                  className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-slate-950/40 border border-slate-800/30 focus:border-cyan-500/50 text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-200 mb-1"
+                  className="auth-input mb-1"
                   value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
+                  onChange={updateField("email")}
                   required
                 />
               </motion.div>
             )}
           </AnimatePresence>
 
-          <motion.div layout="position" className="relative">
+          <motion.div className="relative">
             <Key className="absolute left-4 top-3.5 text-slate-500" size={16} />
             <input
               type="password"
               placeholder="Пароль"
-              className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-slate-950/40 border border-slate-800/30 focus:border-cyan-500/50 text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-200"
+              className="auth-input"
               value={formData.password}
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
-              }
+              onChange={updateField("password")}
               required
             />
           </motion.div>
 
-          <AnimatePresence mode="popLayout">
+          <AnimatePresence initial={false} mode="sync">
             {!isLogin && (
               <motion.div
-                initial={{ opacity: 0, height: 0, scale: 0.95 }}
-                animate={{ opacity: 1, height: "auto", scale: 1 }}
-                exit={{ opacity: 0, height: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                 className="relative overflow-hidden"
               >
                 <Key
@@ -212,31 +216,22 @@ export default function AuthForm({ onAuthSuccess }) {
                 <input
                   type="password"
                   placeholder="Повторите пароль"
-                  className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-slate-950/40 border border-slate-800/30 focus:border-cyan-500/50 text-sm focus:outline-none focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-200 mt-1"
+                  className="auth-input mt-1"
                   value={formData.password2}
-                  onChange={(e) =>
-                    setFormData({ ...formData, password2: e.target.value })
-                  }
+                  onChange={updateField("password2")}
                   required
                 />
               </motion.div>
             )}
           </AnimatePresence>
 
-          <motion.button
-            layout="position"
-            type="submit"
-            className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black py-3.5 rounded-xl transition duration-300 text-sm shadow-lg shadow-cyan-500/10 cursor-pointer flex items-center justify-center gap-2"
-          >
+          <motion.button type="submit" className="auth-submit">
             <span>{isLogin ? "Войти в кабинет" : "Создать аккаунт"}</span>
             <ArrowRight size={14} />
           </motion.button>
         </form>
 
-        <motion.div
-          layout="position"
-          className="mt-5 text-center text-xs text-slate-500"
-        >
+        <motion.div className="auth-switch">
           {isLogin ? "Нет аккаунта? " : "Уже зарегистрированы? "}
           <button
             onClick={() => {
@@ -248,7 +243,7 @@ export default function AuthForm({ onAuthSuccess }) {
             {isLogin ? "Зарегистрироваться" : "Войти"}
           </button>
         </motion.div>
-      </div>
+      </motion.div>
     </motion.div>
   );
 }

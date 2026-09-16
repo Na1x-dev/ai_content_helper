@@ -1,13 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function StableGoogleButton({ clientId, onSuccess }) {
   const [isSdkLoaded, setIsSdkLoaded] = useState(false);
+  const isInitialized = useRef(false);
 
   useEffect(() => {
+    if (!clientId) return undefined;
+
     let checkInterval;
 
     const initGoogleAuth = () => {
-      if (typeof google !== "undefined" && google.accounts?.id) {
+      if (
+        !isInitialized.current &&
+        typeof google !== "undefined" &&
+        google.accounts?.id
+      ) {
         clearInterval(checkInterval);
 
         try {
@@ -22,6 +29,7 @@ export default function StableGoogleButton({ clientId, onSuccess }) {
             auto_select: false,
           });
 
+          isInitialized.current = true;
           setIsSdkLoaded(true);
         } catch (err) {
           console.error("Ошибка инициализации Google Identity SDK:", err);
@@ -75,9 +83,9 @@ export default function StableGoogleButton({ clientId, onSuccess }) {
         type="button"
         onClick={handleLoginClick}
         disabled={!isSdkLoaded}
-        className="w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-slate-900 font-semibold py-3 px-4 rounded-xl border border-slate-200 transition-all duration-200 text-sm shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99]"
+        className="auth-google-button w-full flex items-center justify-center gap-3 bg-white hover:bg-slate-50 text-slate-900 font-semibold py-3 px-4 rounded-xl border border-slate-200 transition-all duration-200 text-sm shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.99]"
       >
-        <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
+        <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
           <path
             fill="#EA4335"
             d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582l3.51-3.51C17.642 1.054 14.982 0 12 0 7.354 0 3.307 2.67 1.242 6.554l4.024 3.211z"

@@ -5,17 +5,25 @@ export default function CustomSelect({ label, value, onChange, options }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  const selectedOption = options.find((opt) => opt.value == value);
+  const selectedOption = options.find((opt) => opt.value === value);
 
   // Закрытие при клике вне списка
   useEffect(() => {
-    function handleClickOutside(event) {
+    function handleDocumentInteraction(event) {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+        return;
+      }
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handleDocumentInteraction);
+    document.addEventListener("keydown", handleDocumentInteraction);
+    return () => {
+      document.removeEventListener("mousedown", handleDocumentInteraction);
+      document.removeEventListener("keydown", handleDocumentInteraction);
+    };
   }, []);
 
   return (
@@ -30,6 +38,8 @@ export default function CustomSelect({ label, value, onChange, options }) {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
         className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-800 bg-slate-950/40 text-sm text-slate-200 transition-all focus:outline-none focus:border-cyan-500/85 focus:ring-4 focus:ring-cyan-500/10 shadow-sm cursor-pointer"
       >
         <span>
@@ -49,11 +59,16 @@ export default function CustomSelect({ label, value, onChange, options }) {
             : "opacity-0 scale-95 pointer-events-none transform -translate-y-2"
         }`}
       >
-        <div className="p-1.5 max-h-60 overflow-y-auto space-y-0.5">
+        <div
+          className="p-1.5 max-h-60 overflow-y-auto space-y-0.5"
+          role="listbox"
+        >
           {options.map((option) => (
             <button
               key={option.value}
               type="button"
+              role="option"
+              aria-selected={option.value === value}
               onClick={() => {
                 onChange(option.value);
                 setIsOpen(false);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Loader2,
   Sparkles,
@@ -14,12 +14,17 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import API from "../api";
 import CustomSelect from "./CustomSelect";
+import {
+  LENGTH_OPTIONS,
+  PLATFORM_OPTIONS,
+  TONE_OPTIONS,
+} from "../constants/contentOptions";
 
 export default function Dashboard({ limits, fetchLimits }) {
   const [prompt, setPrompt] = useState("");
   const [platform, setPlatform] = useState("tg");
   const [tone, setTone] = useState("neutral");
-  const [length, setLength] = useState("medium"); // Новый параметр длины текста
+  const [length, setLength] = useState("medium");
 
   const [loading, setLoading] = useState(false);
   const [generatedText, setGeneratedText] = useState("");
@@ -28,7 +33,8 @@ export default function Dashboard({ limits, fetchLimits }) {
   );
   const [copied, setCopied] = useState(false);
 
-  // Варианты анимации для плавного появления карточек
+  const pollingRef = useRef(null);
+
   const cardVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: {
@@ -49,26 +55,34 @@ export default function Dashboard({ limits, fetchLimits }) {
     }
   };
 
+  useEffect(() => () => clearInterval(pollingRef.current), []);
+
+  const stopPolling = () => {
+    clearInterval(pollingRef.current);
+    pollingRef.current = null;
+  };
+
   const startPolling = (postId) => {
+    stopPolling();
     setStatusText("ИИ анализирует тему и подбирает структуру...");
-    const interval = setInterval(async () => {
+    pollingRef.current = setInterval(async () => {
       try {
         const response = await API.get(`posts/${postId}/`);
         const post = response.data;
 
         if (post.status === "completed") {
-          clearInterval(interval);
+          stopPolling();
           setGeneratedText(post.text);
           setStatusText("Текст успешно написан");
           setLoading(false);
           if (fetchLimits) fetchLimits();
         } else if (post.status === "failed") {
           setStatusText("Произошел сбой. Пожалуйста, попробуйте позже.");
-          clearInterval(interval);
+          stopPolling();
           setLoading(false);
         }
       } catch (err) {
-        clearInterval(interval);
+        stopPolling();
         setStatusText("Ошибка соединения с сервером.", err);
         setLoading(false);
       }
@@ -96,26 +110,13 @@ export default function Dashboard({ limits, fetchLimits }) {
     }
   };
 
-  const platformOptions = [
-    { value: "tg", label: "Telegram (Информативный стиль + Эмодзи)" },
-    { value: "vc", label: "VC.ru (Экспертная глубокая статья)" },
-    { value: "tw", label: "X / Twitter (Краткая емкая мысль)" },
-  ];
-
-  const toneOptions = [
-    { value: "neutral", label: "Нейтральный / Естественный" },
-    { value: "friendly", label: "Дружелюбный и разговорный" },
-    { value: "business", label: "Строгий и деловой" },
-    { value: "funny", label: "Юмористический / Ироничный" },
-  ];
-
   return (
-    <div className="w-full max-w-7xl mx-auto px-2 pb-12">
+    <div className="dashboard-page w-full max-w-7xl mx-auto px-2 pb-12">
       {/* СЕКЦИЯ ПРИВЕТСТВИЯ С ИНФОРМАЦИЕЙ */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="mb-8 p-6 rounded-3xl border border-slate-800/60 bg-gradient-to-r from-slate-900/80 via-slate-950/40 to-slate-900/80 backdrop-blur-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+        className="dashboard-intro mb-8 p-6 rounded-3xl border border-slate-800/60 bg-linear-to-r from-slate-900/80 via-slate-950/40 to-slate-900/80 backdrop-blur-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
       >
         <div className="flex items-center gap-4">
           <div className="p-3.5 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-2xl shadow-inner">
@@ -147,7 +148,7 @@ export default function Dashboard({ limits, fetchLimits }) {
           variants={cardVariants}
           initial="hidden"
           animate="visible"
-          className="lg:col-span-6 xl:col-span-5 card-bg backdrop-blur-xl p-6 rounded-3xl border shadow-xl w-full"
+          className="dashboard-panel lg:col-span-6 xl:col-span-5 card-bg backdrop-blur-xl p-6 rounded-3xl border shadow-xl w-full"
         >
           <form onSubmit={handleGenerate} className="space-y-6">
             <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
@@ -161,7 +162,7 @@ export default function Dashboard({ limits, fetchLimits }) {
             <div className="space-y-2 text-left">
               <label className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 <AlignLeft size={12} className="text-slate-500" /> О чем
-                написать text?
+                написать?
               </label>
               <div className="relative group">
                 <textarea
@@ -182,13 +183,13 @@ export default function Dashboard({ limits, fetchLimits }) {
               label="Целевая площадка"
               value={platform}
               onChange={setPlatform}
-              options={platformOptions}
+              options={PLATFORM_OPTIONS}
             />
             <CustomSelect
               label="Настроение текста"
               value={tone}
               onChange={setTone}
-              options={toneOptions}
+              options={TONE_OPTIONS}
             />
 
             {/* СЕЛЕКТОР ОБЪЁМА ТЕКСТА */}
@@ -197,18 +198,14 @@ export default function Dashboard({ limits, fetchLimits }) {
                 <Type size={12} className="text-slate-500" /> Объём публикации
               </label>
               <div className="grid grid-cols-3 gap-2 bg-slate-950/40 border border-slate-800/80 p-1 rounded-xl">
-                {[
-                  { id: "short", label: "Ёмкий", desc: "~100 слов" },
-                  { id: "medium", label: "Средний", desc: "~250 слов" },
-                  { id: "long", label: "Лонгрид", desc: "~500 слов" },
-                ].map((item) => (
+                {LENGTH_OPTIONS.map((item) => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => setLength(item.id)}
                     className={`py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
                       length === item.id
-                        ? "bg-gradient-to-r from-cyan-500/15 to-indigo-500/15 border border-cyan-500/30 text-cyan-400"
+                        ? "bg-linear-to-r from-cyan-500/15 to-indigo-500/15 border border-cyan-500/30 text-cyan-400"
                         : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/30 border border-transparent"
                     }`}
                   >
@@ -226,7 +223,7 @@ export default function Dashboard({ limits, fetchLimits }) {
               whileTap={{ scale: 0.99 }}
               type="submit"
               disabled={loading || !limits || limits.generations_left <= 0}
-              className="w-full mt-4 flex items-center justify-center gap-2.5 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-slate-950 font-bold py-4 rounded-2xl disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-300 text-sm shadow-lg cursor-pointer"
+              className="w-full mt-4 flex items-center justify-center gap-2.5 bg-linear-to-r from-cyan-500 via-blue-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-slate-950 font-bold py-4 rounded-2xl disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-300 text-sm shadow-lg cursor-pointer"
             >
               {loading ? (
                 <Loader2 className="animate-spin" size={18} />
@@ -246,7 +243,7 @@ export default function Dashboard({ limits, fetchLimits }) {
           variants={cardVariants}
           initial="hidden"
           animate="visible"
-          className="lg:col-span-6 xl:col-span-7 card-bg backdrop-blur-xl p-6 rounded-3xl border shadow-xl flex flex-col min-h-[460px] lg:h-full w-full relative"
+          className="dashboard-panel dashboard-result-panel lg:col-span-6 xl:col-span-7 card-bg backdrop-blur-xl p-6 rounded-3xl border shadow-xl flex flex-col min-h-115 lg:h-full w-full relative"
         >
           {/* ЗАГОЛОВОК ПРАВОЙ ПАНЕЛИ С ЭЛЕМЕНТАМИ УПРАВЛЕНИЯ */}
           <div className="flex flex-row justify-between items-center gap-3 mb-5 border-b border-slate-800/60 pb-3 w-full pr-12 relative">
@@ -256,7 +253,7 @@ export default function Dashboard({ limits, fetchLimits }) {
 
             {/* Статус-бар теперь автоматически сдвигается левее, если появляется кнопка */}
             <span
-              className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full border transition-all truncate max-w-[180px] sm:max-w-none ${
+              className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full border transition-all truncate max-w-45 sm:max-w-none ${
                 loading
                   ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/30 animate-pulse shadow-md"
                   : "bg-slate-950/60 text-slate-400 border-slate-800/80"
@@ -292,30 +289,33 @@ export default function Dashboard({ limits, fetchLimits }) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-950/90 backdrop-blur-sm p-4 text-center rounded-3xl z-10"
+                className="generation-loading-overlay"
               >
-                <div className="relative mb-4 flex items-center justify-center">
-                  <div className="absolute w-12 h-12 rounded-full border-2 border-cyan-500/20 animate-ping" />
-                  <Loader2
-                    size={32}
-                    className="animate-spin text-cyan-400 relative z-10"
-                  />
+                <div className="generation-loader-orbit">
+                  <span className="generation-loader-ring generation-loader-ring-one" />
+                  <span className="generation-loader-ring generation-loader-ring-two" />
+                  <span className="generation-loader-core">
+                    <Loader2 size={22} />
+                  </span>
                 </div>
-                <h4 className="text-sm font-bold text-slate-200">
+                <h4 className="generation-loading-title">
                   Ассистент формирует контент
                 </h4>
-                <p className="text-[11px] text-slate-500 mt-1.5 max-w-[280px] leading-relaxed">
+                <p className="generation-loading-copy">
                   Алгоритм распределяет абзацы, подбирает релевантные стили и
                   выстраивает структуру...
                 </p>
+                <div className="generation-loading-progress">
+                  <span />
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <div className="w-full h-full flex-grow relative">
+          <div className="w-full h-full grow relative">
             <textarea
               readOnly
-              className="w-full h-full min-h-[300px] flex-grow p-2 bg-transparent text-slate-300 font-normal text-sm leading-relaxed resize-none focus:outline-none pr-14"
+              className="w-full h-full min-h-75 grow p-2 bg-transparent text-slate-300 font-normal text-sm leading-relaxed resize-none focus:outline-none pr-14"
               placeholder="Сгенерированный нейросетью текст отобразится в этом окне..."
               value={generatedText}
             />

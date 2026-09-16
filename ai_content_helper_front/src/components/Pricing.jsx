@@ -11,30 +11,32 @@ import {
 import { motion } from "framer-motion";
 
 export default function Pricing() {
-  const [cards, setCards] = useState([]); // Тарифы из БД
+  const [cards, setCards] = useState([]);
   const [currentPlanCode, setCurrentPlanCode] = useState("free");
   const [loadingPlan, setLoadingPlan] = useState(null);
   const [fetchingPlans, setFetchingPlans] = useState(true);
 
   useEffect(() => {
-    // 1. Загружаем текущие лимиты и код плана пользователя
-    API.get("posts/user-limits/")
-      .then((res) => {
-        if (res.data.plan_code) setCurrentPlanCode(res.data.plan_code);
-      })
-      .catch((err) => console.error("Ошибка при загрузке лимитов:", err));
+    let isCurrent = true;
 
-    // 2. Динамически загружаем тарифную сетку из базы данных
-    API.get("plans/")
-      .then((res) => {
-        const sortedPlans = res.data.sort((a, b) => a.weight - b.weight);
-        setCards(sortedPlans);
+    Promise.all([API.get("posts/user-limits/"), API.get("plans/")])
+      .then(([limitsResponse, plansResponse]) => {
+        if (!isCurrent) return;
+        if (limitsResponse.data.plan_code) {
+          setCurrentPlanCode(limitsResponse.data.plan_code);
+        }
+        setCards([...plansResponse.data].sort((a, b) => a.weight - b.weight));
         setFetchingPlans(false);
       })
       .catch((err) => {
-        console.error("Ошибка при загрузке тарифов из БД:", err);
+        if (!isCurrent) return;
+        console.error("Ошибка при загрузке тарифов:", err);
         setFetchingPlans(false);
       });
+
+    return () => {
+      isCurrent = false;
+    };
   }, []);
 
   const handleBuyPlan = async (planCode) => {
@@ -58,46 +60,41 @@ export default function Pricing() {
     weight: 0,
   };
 
-  // Лоадер при первоначальной загрузке страниц
   if (fetchingPlans) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 text-slate-400 gap-4">
-        <div className="relative flex items-center justify-center">
-          <div className="absolute w-12 h-12 rounded-full border-2 border-cyan-500/20 animate-ping" />
-          <Loader2
-            className="animate-spin text-cyan-400 relative z-10"
-            size={32}
-          />
+      <div className="page-state-panel pricing-loading">
+        <div className="generation-loader-orbit">
+          <span className="generation-loader-ring generation-loader-ring-one" />
+          <span className="generation-loader-ring generation-loader-ring-two" />
+          <span className="generation-loader-core">
+            <Loader2 size={22} />
+          </span>
         </div>
-        <p className="text-xs font-semibold tracking-wide text-slate-400 uppercase">
-          Загрузка тарифных планов...
-        </p>
+        <p className="page-state-label">Загрузка тарифных планов...</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-2 pb-16">
+    <div className="pricing-page">
       {/* СЕКЦИЯ ЗАГОЛОВКА */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center space-y-3 mb-12"
+        className="pricing-heading"
       >
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">
+        <div className="pricing-kicker">
           <CreditCard size={12} /> Гибкое управление подпиской
         </div>
-        <h2 className="text-2xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-100 via-slate-200 to-slate-400">
-          Выберите тарифный план
-        </h2>
-        <p className="text-slate-400 text-xs md:text-sm max-w-md mx-auto leading-relaxed">
+        <h2 className="page-title pricing-title">Выберите тарифный план</h2>
+        <p className="page-subtitle pricing-subtitle">
           Переключайтесь между уровнями доступа в любой момент. Дневные лимиты
           обновляются мгновенно.
         </p>
       </motion.div>
 
       {/* СЕТКА ТАРИФНЫХ КАРТОЧЕК */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch w-full mx-auto">
+      <div className="pricing-grid">
         {cards.map((card) => {
           const isActive = currentPlanCode === card.code;
           const isDowngrade = card.weight < currentCard.weight;
@@ -108,22 +105,22 @@ export default function Pricing() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               whileHover={{ y: -6, transition: { duration: 0.2 } }}
-              className={`backdrop-blur-xl border rounded-3xl p-6 flex flex-col justify-between relative transition-all duration-300 shadow-xl ${
+              className={`pricing-card ${
                 isActive
-                  ? "border-cyan-500/60 shadow-lg shadow-cyan-500/5 bg-[#11192e]/90"
+                  ? "pricing-card-active"
                   : card.is_popular
-                    ? "border-indigo-500/40 bg-gradient-to-b from-[#161233]/70 to-[#0e1224]/90 shadow-indigo-500/5"
-                    : "border-slate-800/80 bg-slate-900/40 hover:border-slate-700/80"
+                    ? "pricing-card-popular"
+                    : "pricing-card-muted"
               }`}
             >
               {/* ХЕДЕР МЕТКИ: Популярно / Ваш Тариф */}
               {card.is_popular && !isActive && (
-                <div className="absolute -top-3 right-6 inline-flex items-center gap-1 px-3 py-0.5 bg-gradient-to-r from-cyan-500 to-indigo-500 text-slate-950 font-black text-[9px] uppercase tracking-wider rounded-full shadow-md shadow-indigo-500/20">
+                <div className="absolute -top-3 right-6 inline-flex items-center gap-1 px-3 py-0.5 bg-linear-to-r from-cyan-500 to-indigo-500 text-slate-950 font-black text-[9px] uppercase tracking-wider rounded-full shadow-md shadow-indigo-500/20">
                   <Sparkles size={10} className="fill-current" /> Популярно
                 </div>
               )}
               {isActive && (
-                <span className="absolute -top-3 left-6 px-3 py-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-slate-950 font-black text-[9px] uppercase tracking-wider rounded-full shadow-md shadow-cyan-500/20">
+                <span className="absolute -top-3 left-6 px-3 py-0.5 bg-linear-to-r from-cyan-500 to-blue-500 text-slate-950 font-black text-[9px] uppercase tracking-wider rounded-full shadow-md shadow-cyan-500/20">
                   <ShieldCheck size={10} className="inline mr-1" /> Активный
                   профиль
                 </span>
@@ -135,13 +132,13 @@ export default function Pricing() {
                   <h3
                     className={`text-base font-extrabold ${
                       card.code !== "free" && card.code !== "standard"
-                        ? "text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400"
+                        ? "text-transparent bg-clip-text bg-linear-to-r from-cyan-400 to-indigo-400"
                         : "text-slate-100"
                     }`}
                   >
                     {card.title}
                   </h3>
-                  <p className="text-slate-400 text-[11px] leading-snug min-h-[32px] text-left">
+                  <p className="text-slate-400 text-[11px] leading-snug min-h-8 text-left">
                     {card.subtitle}
                   </p>
 
@@ -157,11 +154,11 @@ export default function Pricing() {
                 </div>
 
                 {/* СПИСОК ФИЧЕЙ С КРАСИВЫМИ ЧЕКБОКСАМИ */}
-                <ul className="space-y-3 text-xs text-slate-300 pt-5 flex-grow">
+                <ul className="space-y-3 text-xs text-slate-300 pt-5 grow">
                   {card.features.map((feature, idx) => (
                     <li key={idx} className="flex items-start gap-2.5 group">
-                      <div className="p-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 mt-0.5 flex-shrink-0 group-hover:bg-cyan-500/20 transition-colors">
-                        <Check size={11} className="stroke-[3]" />
+                      <div className="p-0.5 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 mt-0.5 shrink-0 group-hover:bg-cyan-500/20 transition-colors">
+                        <Check size={11} className="stroke-3" />
                       </div>
                       <span className="text-left leading-normal text-slate-300 group-hover:text-slate-100 transition-colors">
                         {feature}
@@ -181,7 +178,7 @@ export default function Pricing() {
                       ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 cursor-default"
                       : isDowngrade
                         ? "bg-slate-800/80 hover:bg-slate-700 text-slate-200 active:scale-[0.98] border border-slate-700/50 cursor-pointer"
-                        : "bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-slate-950 font-black active:scale-[0.98] cursor-pointer shadow-lg shadow-cyan-500/5"
+                        : "bg-linear-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-slate-950 font-black active:scale-[0.98] cursor-pointer shadow-lg shadow-cyan-500/5"
                   }`}
                 >
                   {loadingPlan === card.code ? (
