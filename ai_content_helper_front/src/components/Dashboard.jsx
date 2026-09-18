@@ -246,42 +246,41 @@ export default function Dashboard({ limits, fetchLimits }) {
           className="dashboard-panel dashboard-result-panel lg:col-span-6 xl:col-span-7 card-bg backdrop-blur-xl p-6 rounded-3xl border shadow-xl flex flex-col min-h-115 lg:h-full w-full relative"
         >
           {/* ЗАГОЛОВОК ПРАВОЙ ПАНЕЛИ С ЭЛЕМЕНТАМИ УПРАВЛЕНИЯ */}
-          <div className="flex flex-row justify-between items-center gap-3 mb-5 border-b border-slate-800/60 pb-3 w-full pr-12 relative">
+          <div className="result-header flex flex-row justify-between items-center gap-3 mb-5 border-b border-slate-800/60 pb-3 w-full relative">
             <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2 tracking-tight whitespace-nowrap">
               <FileText size={16} className="text-slate-400" /> Результат
             </h3>
 
-            {/* Статус-бар теперь автоматически сдвигается левее, если появляется кнопка */}
-            <span
-              className={`text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full border transition-all truncate max-w-45 sm:max-w-none ${
-                loading
-                  ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/30 animate-pulse shadow-md"
-                  : "bg-slate-950/60 text-slate-400 border-slate-800/80"
-              }`}
-            >
-              {statusText}
-            </span>
-          </div>
-
-          {/* КНОПКА КОПИРОВАНИЯ: Теперь она жестко зафиксирована в самом углу карточки, а pr-12 в блоке выше не дает статусу на нее налезть */}
-          <AnimatePresence>
-            {generatedText && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                onClick={handleCopy}
-                className="absolute top-5 right-5 p-2 rounded-xl border bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-400 hover:bg-slate-800/80 transition-all shadow-lg cursor-pointer z-20"
-                title="Скопировать готовый текст"
+            <div className="result-header-actions">
+              <span
+                className={`result-status text-[10px] uppercase font-bold tracking-wider px-3 py-1 rounded-full border transition-all truncate max-w-45 sm:max-w-none ${
+                  loading
+                    ? "bg-cyan-500/10 text-cyan-400 border-cyan-500/30 animate-pulse shadow-md"
+                    : "bg-slate-950/60 text-slate-400 border-slate-800/80"
+                }`}
               >
-                {copied ? (
-                  <Check size={14} className="text-emerald-400" />
-                ) : (
-                  <Copy size={14} />
+                {statusText}
+              </span>
+              <AnimatePresence>
+                {generatedText && (
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    onClick={handleCopy}
+                    className="result-copy-button p-2 rounded-xl border bg-slate-900 border-slate-800 text-slate-400 hover:text-cyan-400 hover:bg-slate-800/80 transition-all shadow-lg cursor-pointer"
+                    title="Скопировать готовый текст"
+                  >
+                    {copied ? (
+                      <Check size={14} className="text-emerald-400" />
+                    ) : (
+                      <Copy size={14} />
+                    )}
+                  </motion.button>
                 )}
-              </motion.button>
-            )}
-          </AnimatePresence>
+              </AnimatePresence>
+            </div>
+          </div>
 
           <AnimatePresence>
             {loading && !generatedText && (
@@ -289,33 +288,41 @@ export default function Dashboard({ limits, fetchLimits }) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="generation-loading-overlay"
+                className="generation-text-loading"
               >
-                <div className="generation-loader-orbit">
-                  <span className="generation-loader-ring generation-loader-ring-one" />
-                  <span className="generation-loader-ring generation-loader-ring-two" />
-                  <span className="generation-loader-core">
-                    <Loader2 size={22} />
-                  </span>
+                <div className="generation-text-loading-head">
+                  <span className="generation-live-dot" />
+                  <span>Генерация текста</span>
+                  <span className="generation-cursor" />
                 </div>
-                <h4 className="generation-loading-title">
-                  Ассистент формирует контент
-                </h4>
-                <p className="generation-loading-copy">
-                  Алгоритм распределяет абзацы, подбирает релевантные стили и
-                  выстраивает структуру...
+                <div className="generation-text-lines" aria-hidden="true">
+                  {[
+                    "long",
+                    "medium",
+                    "short",
+                    "long",
+                    "medium",
+                    "short",
+                    "long",
+                  ].map((line, index) => (
+                    <span
+                      key={index}
+                      className={`generation-text-line generation-text-line-${line}`}
+                    />
+                  ))}
+                </div>
+                <p className="generation-text-loading-copy">
+                  Ассистент собирает структуру и подбирает формулировки...
                 </p>
-                <div className="generation-loading-progress">
-                  <span />
-                </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <div className="w-full h-full grow relative">
+          <div className="result-content w-full grow relative">
             <textarea
               readOnly
-              className="w-full h-full min-h-75 grow p-2 bg-transparent text-slate-300 font-normal text-sm leading-relaxed resize-none focus:outline-none pr-14"
+              wrap="soft"
+              className="result-textarea w-full h-full min-h-75 grow p-2 bg-transparent text-slate-300 font-normal text-sm leading-relaxed resize-none focus:outline-none pr-14"
               placeholder="Сгенерированный нейросетью текст отобразится в этом окне..."
               value={generatedText}
             />

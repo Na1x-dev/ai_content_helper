@@ -37,3 +37,4 @@ Thmubs.db
 .pdfignore
 node_modules/
 .coverage
+htmlcov

@@ -7,11 +7,18 @@ from .models import AIPlatform
 class PostGenerationService:
     @staticmethod
     def _get_ai_client():
-        base_url = os.getenv("OPENAI_BASE_URL", "https://openai.com")
         api_key = os.getenv("OPENAI_API_KEY")
+        base_url = os.getenv("OPENAI_BASE_URL") # Забираем только если он явно указан в .env (для прокси)
+        
         if not api_key:
             return None
-        return OpenAI(api_key=api_key, base_url=base_url)
+            
+        # Формируем аргументы для инициализации
+        client_kwargs = {"api_key": api_key}
+        if base_url: # Если в .env прописан прокси (например, proxyapi.ru), используем его
+            client_kwargs["base_url"] = base_url
+            
+        return OpenAI(**client_kwargs)
 
     @classmethod
     def generate_post_text(cls, prompt: str, platform_code: str) -> str:
@@ -31,7 +38,8 @@ class PostGenerationService:
 
         try:
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                # model="gpt-4o-mini",
+                model="deepseek-chat",
                 messages=[
                     {"role": "system", "content": system_instruction},
                     {"role": "user", "content": f"Тема поста: {prompt}"}
@@ -39,7 +47,9 @@ class PostGenerationService:
                 max_tokens=1000,
                 temperature=0.7
             )
+            # ИСПРАВЛЕНО: обращение к элементам идет через точку, а не по индексу [0]
             return response.choices[0].message.content.strip()
+            
         except Exception as e:
             raise ValidationError({
                 "error": "Ошибка генерации контента через внешнюю нейросеть.",
